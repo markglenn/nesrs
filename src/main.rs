@@ -1,6 +1,7 @@
 mod address_mode;
 mod bus;
 mod cpu;
+mod opcode;
 
 use cpu::Cpu;
 
@@ -9,5 +10,5 @@ fn main() {
 
     let cpu = Cpu::new();
 
-    cpu.print_status();
+    println!("{:#?}", cpu);
 }
