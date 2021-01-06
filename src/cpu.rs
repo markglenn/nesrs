@@ -45,6 +45,15 @@ impl Cpu {
         self.push_stack(bus, (value & 0xFF) as u8);
     }
 
+    pub fn pop_stack(&mut self, bus: &Bus) -> u8 {
+        self.sp = self.sp.wrapping_add(1);
+        bus.read(STACK_PAGE + u16::from(self.sp))
+    }
+
+    pub fn pop_stack_16(&mut self, bus: &Bus) -> u16 {
+        u16::from(self.pop_stack(bus)) + (u16::from(self.pop_stack(bus)) << 8)
+    }
+
     pub fn set_flag(&mut self, bit: CpuStatus, is_set: bool) {
         self.p = (self.p & !(1 << bit as u8)) | (u8::from(is_set) << bit as u8);
     }
@@ -94,5 +103,33 @@ mod test {
         cpu.set_flag(CpuStatus::Carry, true);
         assert!(cpu.get_flag(CpuStatus::Carry));
         assert!(!cpu.get_flag(CpuStatus::Overflow));
+    }
+
+    #[test]
+    fn test_stack() {
+        let mut cpu = Cpu::new();
+        let mut bus = Bus::new();
+
+        cpu.push_stack(&mut bus, 1);
+        cpu.push_stack(&mut bus, 2);
+        cpu.push_stack(&mut bus, 3);
+        assert_eq!(cpu.pop_stack(&bus), 3);
+        assert_eq!(cpu.pop_stack(&bus), 2);
+        assert_eq!(cpu.pop_stack(&bus), 1);
+    }
+
+    #[test]
+    fn test_stack_16() {
+        let mut cpu = Cpu::new();
+        let mut bus = Bus::new();
+
+        cpu.push_stack_16(&mut bus, 0xFFFF);
+        cpu.push_stack(&mut bus, 0x12);
+        cpu.push_stack_16(&mut bus, 0xFEFE);
+        cpu.push_stack_16(&mut bus, 0xFAFA);
+        assert_eq!(cpu.pop_stack_16(&bus), 0xFAFA);
+        assert_eq!(cpu.pop_stack_16(&bus), 0xFEFE);
+        assert_eq!(cpu.pop_stack(&bus), 0x12);
+        assert_eq!(cpu.pop_stack_16(&bus), 0xFFFF);
     }
 }
