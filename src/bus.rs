@@ -8,7 +8,7 @@ impl Bus {
     }
 
     /// Reads a byte from the interface at the given address
-    pub fn read(&mut self, address: u16) -> u8 {
+    pub fn read(&self, address: u16) -> u8 {
         self.ram[address as usize]
     }
 
