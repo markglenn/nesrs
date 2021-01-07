@@ -1,4 +1,5 @@
 use std::fmt;
+#[allow(dead_code)]
 #[derive(PartialEq, Clone, Copy)]
 pub enum AddressModeValue {
     Implied,
