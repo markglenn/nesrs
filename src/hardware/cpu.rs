@@ -30,8 +30,8 @@ impl Cpu {
             x: 0,
             y: 0,
             pc: 0,
-            sp: 0,
-            p: 0,
+            sp: 0xFD,
+            p: 0x34,
         }
     }
 

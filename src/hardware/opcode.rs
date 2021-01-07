@@ -1,4 +1,5 @@
-use super::{address_mode::AddressModeValue, bus::Bus, cpu::Cpu, cpu::CpuStatus};
+use super::{bus::Bus, cpu::Cpu, cpu::CpuStatus};
+use crate::address_mode::AddressModeValue;
 
 type OpcodeFunction = fn(&mut Cpu, &mut Bus, AddressModeValue);
 #[allow(dead_code)]
