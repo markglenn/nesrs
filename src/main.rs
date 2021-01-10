@@ -1,23 +1,19 @@
-mod address_mode;
+mod cartridge;
 mod hardware;
-mod rom;
+mod mapper;
+mod ppu;
 
-use hardware::bus::Bus;
+use cartridge::rom::NESRom;
 use hardware::cpu::Cpu;
-use rom::NESRom;
 
 fn main() {
-    println!("Hello, world!");
+    let cartridge = Box::new(NESRom::from_file("priv/nestest.nes").unwrap());
+    let mut cpu = Cpu::new(cartridge);
+    cpu.reset();
 
-    let mut cpu = Cpu::new();
-    let mut bus = Bus::new();
-
-    println!("{:#?}", cpu);
-
-    cpu.push_stack(&mut bus, 0xFF);
-    cpu.push_stack_16(&mut bus, 0xAAAA);
-
-    let _cartridge = NESRom::from_file("priv/nestest.nes").unwrap();
-    println!("#{:#?}", cpu.pop_stack_16(&bus));
-    println!("#{:#?}", cpu.pop_stack(&bus));
+    loop {
+        let mut name: String = String::new();
+        cpu.execute_next_opcode();
+        println!("{:#?}", cpu);
+    }
 }
