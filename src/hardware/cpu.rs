@@ -57,6 +57,13 @@ impl Cpu {
         self.interrupt(InterruptVector::Reset);
     }
 
+    pub fn carry(&self) -> u8 {
+        match self.get_flag(CpuStatus::Carry) {
+            true => 1,
+            false => 0,
+        }
+    }
+
     pub fn execute_next_opcode(&mut self) {
         let opcode = self.next_byte();
         execute(self, opcode);
