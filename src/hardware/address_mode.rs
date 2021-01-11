@@ -18,6 +18,7 @@ impl AddressModeValue {
         }
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AddressMode {
     ZeroPage,         // val = PEEK(arg)
     ZeroPageIndexedX, // val = PEEK((arg + X) % 256)
@@ -25,9 +26,10 @@ pub enum AddressMode {
     Absolute,         // val = PEEK(arg)
     AbsoluteIndexedX, // val = PEEK(arg + X)
     AbsoluteIndexedY, // val = PEEK(arg + Y)
-    IndexedIndirect,  // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-    IndirectIndexed,  // val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
+    IndirectX,        // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
+    IndirectY,        // val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
     Immediate,        // val = arg
+    Implied,          // nop
 }
 
 impl fmt::Debug for AddressModeValue {
