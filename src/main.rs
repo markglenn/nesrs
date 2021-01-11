@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod cartridge;
 mod hardware;
 mod mapper;
@@ -11,9 +12,14 @@ fn main() {
     let mut cpu = Cpu::new(cartridge);
     cpu.reset();
 
+    let mut i = 0;
     loop {
-        let mut name: String = String::new();
+        i = i + 1;
+        print!("{}\t", i);
         cpu.execute_next_opcode();
-        println!("{:#?}", cpu);
+
+        if i >= 1_000_000 {
+            panic!();
+        }
     }
 }
