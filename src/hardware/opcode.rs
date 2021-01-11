@@ -77,9 +77,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x06 -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ASL",
+        func: asl,
+        address_mode: AddressMode::ZeroPage,
     },
     // 0x07 -
     OpCode {
@@ -125,9 +125,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x0E -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ASL",
+        func: asl,
+        address_mode: AddressMode::Absolute,
     },
     // 0x0F -
     OpCode {
@@ -173,9 +173,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x16 -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ASL",
+        func: asl,
+        address_mode: AddressMode::ZeroPageIndexedX,
     },
     // 0x17 -
     OpCode {
@@ -221,9 +221,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x1E -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ASL",
+        func: asl,
+        address_mode: AddressMode::AbsoluteIndexedX,
     },
     // 0x1F -
     OpCode {
@@ -653,9 +653,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x66 -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ROR",
+        func: ror,
+        address_mode: AddressMode::ZeroPage,
     },
     // 0x67 -
     OpCode {
@@ -701,9 +701,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x6E -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ROR",
+        func: ror,
+        address_mode: AddressMode::Absolute,
     },
     // 0x6F -
     OpCode {
@@ -749,9 +749,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x76 -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ROR",
+        func: ror,
+        address_mode: AddressMode::ZeroPageIndexedX,
     },
     // 0x77 -
     OpCode {
@@ -797,9 +797,9 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x7E -
     OpCode {
-        name: "INV",
-        func: invalid,
-        address_mode: AddressMode::Implied,
+        name: "ROR",
+        func: ror,
+        address_mode: AddressMode::AbsoluteIndexedX,
     },
     // 0x7F -
     OpCode {
@@ -1872,6 +1872,16 @@ fn asl_a(cpu: &mut Cpu, _mode: AddressMode) {
     set_zero_and_negative(cpu, cpu.a);
 }
 
+fn asl(cpu: &mut Cpu, mode: AddressMode) {
+    let address = cpu.operand_address(mode).address();
+    let operand = cpu.bus.read(address);
+    let value = operand << 1;
+
+    cpu.set_flag(CpuStatus::Carry, operand & 0x80 != 0);
+    set_zero_and_negative(cpu, value);
+    cpu.bus.write(address, value);
+}
+
 fn ror_a(cpu: &mut Cpu, _mode: AddressMode) {
     let mut value = cpu.a >> 1;
 
@@ -1882,6 +1892,16 @@ fn ror_a(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Carry, cpu.a & 1 != 0);
     cpu.a = value;
     set_zero_and_negative(cpu, value);
+}
+
+fn ror(cpu: &mut Cpu, mode: AddressMode) {
+    let address = cpu.operand_address(mode).address();
+    let operand = cpu.bus.read(address);
+    let value = (operand >> 1) | (cpu.carry() << 7);
+
+    cpu.set_flag(CpuStatus::Carry, operand & 1 != 0);
+    set_zero_and_negative(cpu, value);
+    cpu.bus.write(address, value);
 }
 
 fn rol_a(cpu: &mut Cpu, _mode: AddressMode) {
