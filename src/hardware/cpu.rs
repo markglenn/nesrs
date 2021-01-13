@@ -15,6 +15,7 @@ pub enum CpuStatus {
     Zero = 1,
     InterruptDisable = 2,
     Decimal = 3,
+    Break = 4,
     Overflow = 6,
     Negative = 7,
 }
@@ -121,8 +122,9 @@ impl Cpu {
             AddressMode::Absolute => self.absolute_read(),
             AddressMode::AbsoluteIndexedX => self.absolute_index_read(self.x),
             AddressMode::AbsoluteIndexedY => self.absolute_index_read(self.y),
-            AddressMode::IndirectX => self.index_indirect_read(),
-            AddressMode::IndirectY => self.indirect_index_read(),
+            AddressMode::Indirect => self.indirect_read(),
+            AddressMode::IndirectX => self.indirect_x_read(),
+            AddressMode::IndirectY => self.indirect_y_read(),
             AddressMode::Immediate => AddressModeValue::Immediate(self.next_byte()),
             _ => panic!("Invalid operand address"),
         }
@@ -143,25 +145,41 @@ impl Cpu {
 
     fn absolute_index_read(&mut self, register: u8) -> AddressModeValue {
         let offset = self.next_word();
-        AddressModeValue::Absolute(offset + register as u16)
+        AddressModeValue::Absolute(offset.wrapping_add(register as u16))
     }
 
-    fn index_indirect_read(&mut self) -> AddressModeValue {
-        let offset = self.next_byte() as u16 + self.x as u16;
+    fn indirect_x_read(&mut self) -> AddressModeValue {
+        // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
+        let arg_x = (self.next_byte() as u16).wrapping_add(self.x as u16);
+        let low_address = arg_x % 256;
+        let high_address = arg_x.wrapping_add(1) % 256;
 
-        let low_byte = self.bus.read(offset & 0xFF) as u16;
-        let high_byte = self.bus.read((offset + 1) % 0xFF) as u16;
+        let low_byte = self.bus.read(low_address) as u16;
+        let high_byte = self.bus.read(high_address) as u16;
 
         AddressModeValue::Absolute(low_byte | high_byte << 8)
     }
 
-    fn indirect_index_read(&mut self) -> AddressModeValue {
+    fn indirect_read(&mut self) -> AddressModeValue {
+        let address = self.next_word();
+        let high_address = if address & 0xFF == 0xFF {
+            address - 0xFF
+        } else {
+            address + 1
+        };
+        let low_byte = self.bus.read(address) as u16;
+        let high_byte = self.bus.read(high_address) as u16;
+
+        AddressModeValue::Absolute(low_byte | (high_byte << 8))
+    }
+
+    fn indirect_y_read(&mut self) -> AddressModeValue {
         let arg = self.next_byte() as u16;
 
         let low_byte = self.bus.read(arg as u16) as u16;
-        let high_byte = self.bus.read((arg + u16::from(self.x) + 1) & 0xFF) as u16;
+        let high_byte = self.bus.read((arg + 1) & 0xFF) as u16;
 
-        AddressModeValue::Absolute(low_byte | high_byte << 8)
+        AddressModeValue::Absolute((low_byte | high_byte << 8).wrapping_add(self.y as u16))
     }
 
     fn interrupt(&mut self, interrupt: InterruptVector) {

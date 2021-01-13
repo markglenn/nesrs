@@ -26,10 +26,12 @@ pub enum AddressMode {
     Absolute,         // val = PEEK(arg)
     AbsoluteIndexedX, // val = PEEK(arg + X)
     AbsoluteIndexedY, // val = PEEK(arg + Y)
+    Indirect,         // val = PEEK(arg) + (PEEK(arg + 1) * 256)
     IndirectX,        // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
     IndirectY,        // val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
     Immediate,        // val = arg
     Implied,          // nop
+    Offset,           // Offset from current PC
 }
 
 impl fmt::Debug for AddressModeValue {
