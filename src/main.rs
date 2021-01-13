@@ -15,10 +15,10 @@ fn main() {
     let mut i = 0;
     loop {
         i = i + 1;
-        print!("{}\t", i);
+        print!("{:7}  ", i);
         cpu.execute_next_opcode();
 
-        if i >= 1_000_000 {
+        if i >= 10000 {
             panic!();
         }
     }
