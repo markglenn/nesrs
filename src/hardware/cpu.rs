@@ -31,12 +31,13 @@ pub enum InterruptVector {
 pub struct Cpu {
     // 6502 CPU Registers
     pub bus: Bus,
-    pub a: u8,   // Accumulator
-    pub x: u8,   // X register (index)
-    pub y: u8,   // Y register (index)
-    pub pc: u16, // Program counter
-    pub sp: u8,  // Stack pointer
-    pub p: u8,   // Status register
+    pub a: u8,    // Accumulator
+    pub x: u8,    // X register (index)
+    pub y: u8,    // Y register (index)
+    pub pc: u16,  // Program counter
+    pub sp: u8,   // Stack pointer
+    pub p: u8,    // Status register
+    pub cyc: u16, // Cycle count
 }
 
 impl Cpu {
@@ -49,6 +50,7 @@ impl Cpu {
             pc: 0,
             sp: 0xFD,
             p: 0x24,
+            cyc: 0,
         }
     }
 
@@ -182,8 +184,8 @@ impl Cpu {
         AddressModeValue::Absolute((low_byte | high_byte << 8).wrapping_add(self.y as u16))
     }
 
-    fn interrupt(&mut self, interrupt: InterruptVector) {
-        self.pc = self.bus.read_word(interrupt as u16);
+    fn interrupt(&mut self, _interrupt: InterruptVector) {
+        // self.pc = self.bus.read_word(interrupt as u16);
         self.pc = 0xC000;
     }
 }
@@ -192,8 +194,13 @@ impl std::fmt::Debug for Cpu {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:--- SL:---",
-            self.a, self.x, self.y, self.p, self.sp
+            "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:3}",
+            self.a,
+            self.x,
+            self.y,
+            self.p,
+            self.sp,
+            ((self.bus.cyc - 1) * 3) % 341
         )
     }
 }

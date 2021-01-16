@@ -39,47 +39,49 @@ fn print_debug(code: u8, opcode: &OpCode, cpu: &mut Cpu) {
             format!(
                 "{:02X} {:02X} {:02X}",
                 code,
-                cpu.bus.read(cpu.pc),
-                cpu.bus.read(cpu.pc + 1),
+                cpu.bus.unclocked_read(cpu.pc),
+                cpu.bus.unclocked_read(cpu.pc + 1),
             )
         }
         AddressMode::Implied => format!("{:02X}", code),
-        _ => format!("{:02X} {:02X}", code, cpu.bus.read(cpu.pc)),
+        _ => format!("{:02X} {:02X}", code, cpu.bus.unclocked_read(cpu.pc)),
     };
 
     let operation = match opcode.address_mode {
-        AddressMode::Immediate => format!("{:3} #${:02X}", opcode.name, cpu.bus.read(cpu.pc)),
+        AddressMode::Immediate => {
+            format!("{:3} #${:02X}", opcode.name, cpu.bus.unclocked_read(cpu.pc))
+        }
         AddressMode::Indirect => {
-            let address = cpu.bus.read_word(cpu.pc);
-            let memory_value = cpu.bus.read_word(address);
+            let address = cpu.bus.unclocked_read_word(cpu.pc);
+            let memory_value = cpu.bus.unclocked_read_word(address);
             format!(
                 "{:3} (${:04X}) = {:04X}",
                 opcode.name, address, memory_value
             )
         }
         AddressMode::Absolute => {
-            let address = cpu.bus.read_word(cpu.pc);
+            let address = cpu.bus.unclocked_read_word(cpu.pc);
             format!(
                 "{:3} ${:04X} = {:02X}",
                 opcode.name,
                 address,
-                cpu.bus.read(address)
+                cpu.bus.unclocked_read(address)
             )
         }
         AddressMode::Offset => format!(
             "{:3} ${:04X}",
             opcode.name,
             cpu.pc
-                .wrapping_add(cpu.bus.read(cpu.pc) as i8 as u16)
+                .wrapping_add(cpu.bus.unclocked_read(cpu.pc) as i8 as u16)
                 .wrapping_add(1)
         ),
         AddressMode::ZeroPage => {
-            let operand = cpu.bus.read(cpu.pc);
-            let value = cpu.bus.read(operand as u16);
+            let operand = cpu.bus.unclocked_read(cpu.pc);
+            let value = cpu.bus.unclocked_read(operand as u16);
             format!("{:3} ${:02X} = ${:02X}", opcode.name, operand, value)
         }
         AddressMode::Implied => format!("{:3}", opcode.name),
-        _ => format!("{:3} ${:02X}", opcode.name, cpu.bus.read(cpu.pc)),
+        _ => format!("{:3} ${:02X}", opcode.name, cpu.bus.unclocked_read(cpu.pc)),
     };
 
     println!(
@@ -1640,6 +1642,7 @@ fn jmp(cpu: &mut Cpu, mode: AddressMode) {
 fn jsr(cpu: &mut Cpu, mode: AddressMode) {
     let target_address = cpu.operand_address(mode);
     let return_address = cpu.pc - 1;
+    cpu.bus.tick();
 
     cpu.push_stack_16(return_address);
     cpu.pc = target_address.address();
@@ -1707,6 +1710,8 @@ fn dec(cpu: &mut Cpu, mode: AddressMode) {
 
 // PusH Processor status
 fn php(cpu: &mut Cpu, _mode: AddressMode) {
+    cpu.bus.tick();
+
     // Bits 4 & 5 are always set on PHP
     //   http://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
     cpu.push_stack(cpu.p | 0b110000);
@@ -1714,16 +1719,21 @@ fn php(cpu: &mut Cpu, _mode: AddressMode) {
 
 // PusH Accumulator
 fn pha(cpu: &mut Cpu, _mode: AddressMode) {
+    cpu.bus.tick();
     cpu.push_stack(cpu.a);
 }
 
 // PuLl Processor status
 fn plp(cpu: &mut Cpu, _mode: AddressMode) {
+    cpu.bus.tick();
+    cpu.bus.tick();
     cpu.p = (cpu.pop_stack() & 0b11001111) | (cpu.p & 0b00110000);
 }
 
 // PuLl Accumulator
 fn pla(cpu: &mut Cpu, _mode: AddressMode) {
+    cpu.bus.tick();
+    cpu.bus.tick();
     cpu.a = cpu.pop_stack();
     set_zero_and_negative(cpu, cpu.a);
 }
@@ -1774,11 +1784,16 @@ fn bmi(cpu: &mut Cpu, _mode: AddressMode) {
 
 // ReTurn from Subroutine
 fn rts(cpu: &mut Cpu, _mode: AddressMode) {
+    cpu.bus.tick();
+    cpu.bus.tick();
     let return_address = cpu.pop_stack_16() + 1;
     cpu.pc = return_address;
+    cpu.bus.tick();
 }
 
 fn rti(cpu: &mut Cpu, _mode: AddressMode) {
+    cpu.bus.tick();
+    cpu.bus.tick();
     cpu.p = (cpu.pop_stack() & 0b11011111) | (cpu.p & 0b00100000);
     cpu.pc = cpu.pop_stack_16();
 }
@@ -1837,30 +1852,37 @@ fn sbc(cpu: &mut Cpu, mode: AddressMode) {
     set_carry_and_overflow(cpu, a, operand, result);
 }
 
-// INcrement Y
-fn iny(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.y = cpu.y.wrapping_add(1);
-    set_zero_and_negative(cpu, cpu.y);
-}
-
-// DEcrement Y
-fn dey(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.y = cpu.y.wrapping_sub(1);
-    set_zero_and_negative(cpu, cpu.y);
-}
-
 // INcrement X
 fn inx(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.x = cpu.x.wrapping_add(1);
-    set_zero_and_negative(cpu, cpu.x);
+    let value = cpu.x.wrapping_add(1);
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.x = value;
 }
 
 // DEcrement X
 fn dex(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.x = cpu.x.wrapping_sub(1);
-    set_zero_and_negative(cpu, cpu.x);
+    let value = cpu.x.wrapping_sub(1);
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.x = value;
 }
 
+// INcrement Y
+fn iny(cpu: &mut Cpu, _mode: AddressMode) {
+    let value = cpu.y.wrapping_add(1);
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.y = value;
+}
+
+// DEcrement Y
+fn dey(cpu: &mut Cpu, _mode: AddressMode) {
+    let value = cpu.y.wrapping_sub(1);
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.y = value;
+}
 /* Comparison Operations */
 
 // CoMPare (with accumulator)
@@ -1888,37 +1910,49 @@ fn cpy(cpu: &mut Cpu, mode: AddressMode) {
 
 // Transfer A to X
 fn tax(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.x = cpu.a;
-    set_zero_and_negative(cpu, cpu.a);
+    let value = cpu.a;
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.x = value;
 }
 
 // Transfer X to A
 fn txa(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.a = cpu.x;
-    set_zero_and_negative(cpu, cpu.a);
+    let value = cpu.x;
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.a = value;
 }
 
 // Transfer A to Y
 fn tay(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.y = cpu.a;
-    set_zero_and_negative(cpu, cpu.a);
+    let value = cpu.a;
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.y = value;
 }
 
 // Transfer Y to A
 fn tya(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.a = cpu.y;
-    set_zero_and_negative(cpu, cpu.a);
+    let value = cpu.y;
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.a = value;
 }
 
 // Transfer Stack pointer to X
 fn tsx(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.x = cpu.sp;
-    set_zero_and_negative(cpu, cpu.sp);
+    let value = cpu.sp;
+    cpu.bus.tick();
+    set_zero_and_negative(cpu, value);
+    cpu.x = value;
 }
 
 // Transfer X to Stack pointer
 fn txs(cpu: &mut Cpu, _mode: AddressMode) {
-    cpu.sp = cpu.x;
+    let value = cpu.x;
+    cpu.bus.tick();
+    cpu.sp = value;
 }
 
 /* Bit Manipulation Operations */
@@ -1927,6 +1961,7 @@ fn lsr_a(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Carry, cpu.a & 1 != 0);
     cpu.a = cpu.a >> 1;
     set_zero_and_negative(cpu, cpu.a);
+    cpu.bus.tick();
 }
 
 fn lsr(cpu: &mut Cpu, mode: AddressMode) {
@@ -1949,6 +1984,7 @@ fn asl_a(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Carry, cpu.a & 0x80 > 0);
     cpu.a = cpu.a << 1;
     set_zero_and_negative(cpu, cpu.a);
+    cpu.bus.tick();
 }
 
 fn asl(cpu: &mut Cpu, mode: AddressMode) {
@@ -2038,41 +2074,49 @@ fn nop(cpu: &mut Cpu, mode: AddressMode) {
     if mode != AddressMode::Implied {
         let _ = read_operand(cpu, mode);
     }
+    cpu.bus.tick();
 }
 
 // SEt Carry
 fn sec(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Carry, true);
+    cpu.bus.tick();
 }
 
 // CLear Carry
 fn clc(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Carry, false);
+    cpu.bus.tick();
 }
 
 // SEt Interrupt
 fn sei(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::InterruptDisable, true);
+    cpu.bus.tick();
 }
 
 // CLear Interrupt
 fn cli(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::InterruptDisable, false);
+    cpu.bus.tick();
 }
 
 // CLear oVerflow
 fn clv(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Overflow, false);
+    cpu.bus.tick();
 }
 
 // SEt Decimal
 fn sed(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Decimal, true);
+    cpu.bus.tick();
 }
 
 // CLear Decimal
 fn cld(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Decimal, false);
+    cpu.bus.tick();
 }
 
 fn brk(cpu: &mut Cpu, _mode: AddressMode) {
@@ -2159,6 +2203,7 @@ fn branch(cpu: &mut Cpu, success: bool) {
     let offset = read_operand(cpu, AddressMode::Immediate) as i8 as u16;
 
     if success {
+        cpu.bus.tick();
         cpu.pc = cpu.pc.wrapping_add(offset as u16);
     }
 }

@@ -6,6 +6,7 @@ pub struct Bus {
     cartridge: Box<NESRom>,
     ppu: Ppu,
     apu: Apu,
+    pub cyc: u64,
 }
 
 impl Bus {
@@ -15,11 +16,17 @@ impl Bus {
             cartridge: rom,
             ppu: Ppu::new(),
             apu: Apu::new(),
+            cyc: 0,
         }
     }
 
     /// Reads a byte from the interface at the given address
     pub fn read(&mut self, address: u16) -> u8 {
+        self.tick();
+        self.unclocked_read(address)
+    }
+
+    pub fn unclocked_read(&mut self, address: u16) -> u8 {
         match address {
             0..=0x1FFF => self.internal_ram[(address & 0x7FF) as usize],
             0x2000..=0x3FFF => self.ppu.read(address & 0x7),
@@ -38,8 +45,16 @@ impl Bus {
         low_byte | (high_byte << 8)
     }
 
+    pub fn unclocked_read_word(&mut self, address: u16) -> u16 {
+        let low_byte = self.unclocked_read(address) as u16;
+        let high_byte = self.unclocked_read(address + 1) as u16;
+
+        low_byte | (high_byte << 8)
+    }
+
     /// Writes a byte to the interface at the given address
     pub fn write(&mut self, address: u16, data: u8) {
+        self.tick();
         match address {
             0..=0x1FFF => self.internal_ram[(address & 0x7FF) as usize] = data,
             0x2000..=0x3FFF => panic!("NES PPU registers"), /* Mirror every 8 bytes */
@@ -47,6 +62,10 @@ impl Bus {
             0x4018..=0x401F => panic!("APU and I/O functionality that is normally disabled."),
             0x4020..=0xFFFF => self.cartridge.write(address, data),
         };
+    }
+
+    pub fn tick(&mut self) {
+        self.cyc = self.cyc + 1;
     }
 }
 
