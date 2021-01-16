@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+mod apu;
 mod cartridge;
 mod hardware;
 mod mapper;
@@ -18,7 +19,10 @@ fn main() {
         print!("{:7}  ", i);
         cpu.execute_next_opcode();
 
-        if i >= 10000 {
+        if i >= 8991 {
+            let low = cpu.bus.read(0x0002);
+            let high = cpu.bus.read(0x0003);
+            print!("{:02X} {:02X}", low, high);
             panic!();
         }
     }

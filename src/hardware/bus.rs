@@ -1,10 +1,11 @@
-use crate::{cartridge::rom::NESRom, ppu::Ppu};
+use crate::{apu::Apu, cartridge::rom::NESRom, ppu::Ppu};
 
 const RAM_SIZE: usize = 0x800;
 pub struct Bus {
     internal_ram: [u8; RAM_SIZE],
     cartridge: Box<NESRom>,
     ppu: Ppu,
+    apu: Apu,
 }
 
 impl Bus {
@@ -13,6 +14,7 @@ impl Bus {
             internal_ram: [0; RAM_SIZE],
             cartridge: rom,
             ppu: Ppu::new(),
+            apu: Apu::new(),
         }
     }
 
@@ -21,7 +23,7 @@ impl Bus {
         match address {
             0..=0x1FFF => self.internal_ram[(address & 0x7FF) as usize],
             0x2000..=0x3FFF => self.ppu.read(address & 0x7),
-            0x4000..=0x4017 => panic!("Reading from NES APU and I/O registers"),
+            0x4000..=0x4017 => self.apu.read(address),
             0x4018..=0x401F => {
                 panic!("Reading from APU and I/O functionality that is normally disabled.")
             }
@@ -41,7 +43,7 @@ impl Bus {
         match address {
             0..=0x1FFF => self.internal_ram[(address & 0x7FF) as usize] = data,
             0x2000..=0x3FFF => panic!("NES PPU registers"), /* Mirror every 8 bytes */
-            0x4000..=0x4017 => panic!("NES APU and I/O registers"),
+            0x4000..=0x4017 => self.apu.write(address, data),
             0x4018..=0x401F => panic!("APU and I/O functionality that is normally disabled."),
             0x4020..=0xFFFF => self.cartridge.write(address, data),
         };
