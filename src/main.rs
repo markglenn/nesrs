@@ -19,10 +19,7 @@ fn main() {
         print!("{:7}  ", i);
         cpu.execute_next_opcode();
 
-        if i >= 8991 {
-            let low = cpu.bus.read(0x0002);
-            let high = cpu.bus.read(0x0003);
-            print!("{:02X} {:02X}", low, high);
+        if i >= 1000 {
             panic!();
         }
     }
