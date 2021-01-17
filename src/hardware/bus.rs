@@ -16,11 +16,12 @@ pub struct Bus {
 impl Bus {
     pub fn new(rom: Box<NESRom>) -> Bus {
         let mirroring = rom.header.mirroring;
+        let chr_rom = rom.chr_rom();
 
         Bus {
             ram: [0; RAM_SIZE],
             cartridge: rom,
-            ppu: Ppu::new(mirroring),
+            ppu: Ppu::new(chr_rom, mirroring),
             apu: Apu::new(),
             cycles: 0,
             nmi: Interrupt::new(),

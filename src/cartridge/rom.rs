@@ -33,6 +33,13 @@ impl NESRom {
         })
     }
 
+    pub fn chr_rom(&self) -> Vec<u8> {
+        let start = self.header.prg_rom_pages * 0x4000;
+        let length = self.header.chr_rom_pages * 0x2000;
+
+        self.data[start..start + length].to_vec()
+    }
+
     pub fn from_file(filename: &str) -> io::Result<NESRom> {
         let mut f = File::open(filename)?;
 
