@@ -7,8 +7,8 @@ bitfield! {
 
     pub nametable, _: 1, 0;
     pub vram_addr_inc, _: 2;
-    pub sprite_pattern_address, _: 3;
-    pub background_pattern_addr, _: 4;
+    sprite_pattern_addr, _: 3;
+    background_pattern_addr, _: 4;
     pub sprite_size, _: 5;
     pub master_slave_select, _: 6;
     pub generate_nmi, _: 7;
@@ -39,6 +39,20 @@ impl ControlRegister {
             2 => 0x2800,
             3 => 0x2C00,
             _ => panic!(), // Impossible to hit this
+        }
+    }
+
+    pub fn background_pattern_address(&self) -> u16 {
+        match self.background_pattern_addr() {
+            false => 0x0000,
+            true => 0x1000,
+        }
+    }
+
+    pub fn sprite_pattern_address(&self) -> u16 {
+        match self.sprite_pattern_addr() {
+            false => 0x0000,
+            true => 0x1000,
         }
     }
 }

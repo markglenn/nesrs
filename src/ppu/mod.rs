@@ -16,25 +16,26 @@ use crate::hardware::interrupt::Interrupt;
 use crate::mapper::Mirroring;
 
 pub struct Ppu {
-    palette_table: [u8; 32],
-    vram: [u8; 2048],
-    oam_data: [u8; 256],
+    pub palette_table: [u8; 32],
+    pub vram: [u8; 2048],
+    pub oam_data: [u8; 256],
     oam_addr: u8,
+    pub chr_rom: Vec<u8>,
     internal: u8,         // Internal bus data buffer
     mirroring: Mirroring, // Mirroring mode
 
-    ctrl: ControlRegister,  // 0x2000
-    mask: MaskRegister,     // 0x2001
-    status: StatusRegister, // 0x2002
-    scroll: ScrollRegister, // 0x2005
-    addr: AddressRegister,  // 0x2006
+    pub ctrl: ControlRegister, // 0x2000
+    mask: MaskRegister,        // 0x2001
+    status: StatusRegister,    // 0x2002
+    scroll: ScrollRegister,    // 0x2005
+    addr: AddressRegister,     // 0x2006
 
     dot: usize,
     scanline: usize,
 }
 
 impl Ppu {
-    pub fn new(mirroring: Mirroring) -> Ppu {
+    pub fn new(chr_rom: Vec<u8>, mirroring: Mirroring) -> Ppu {
         Ppu {
             internal: 0,
             palette_table: [0; 32],
@@ -49,6 +50,7 @@ impl Ppu {
             mirroring,
             dot: 0,
             scanline: 241,
+            chr_rom,
         }
     }
 
@@ -61,7 +63,7 @@ impl Ppu {
                 );
             }
             0x2002 => self.status.read(),
-            0x2004 => panic!(),
+            0x2004 => self.oam_data[self.oam_addr as usize],
             0x2007 => self.read_data(),
             _ => self.read(address & 0x2007),
         }
@@ -92,12 +94,14 @@ impl Ppu {
         self.addr.increment(self.ctrl.vram_address_increment());
 
         match address {
+            0..=0x1FFF => self.chr_rom[address as usize],
             0x2000..=0x2FFF => {
                 let result = self.internal;
                 self.internal = self.vram[self.mirror_vram_addr(address) as usize];
                 result
             }
-            _ => panic!(),
+            0x3F00..=0x3FFF => self.palette_table[(address & 0x1F) as usize],
+            _ => unimplemented!("Attempted to read from #{:04X}", address),
         }
     }
 
@@ -106,7 +110,7 @@ impl Ppu {
         self.addr.increment(self.ctrl.vram_address_increment());
 
         match address {
-            0..=0x1FFF => unimplemented!("Attempted to write to #{:04X}", address),
+            0..=0x1FFF => self.chr_rom[address as usize] = data, //unimplemented!("Attempted to write to #{:04X}", address),
             0x2000..=0x3EFF => self.vram[self.mirror_vram_addr(address) as usize] = data,
             0x3F00..=0x3FFF => self.palette_table[(address & 0x1F) as usize] = data,
             _ => panic!(),
