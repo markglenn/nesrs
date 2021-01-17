@@ -19,7 +19,7 @@ fn main() {
         print!("{:7}  ", i);
         cpu.execute_next_opcode();
 
-        if i >= 5000 {
+        if i >= 8991 {
             panic!();
         }
     }

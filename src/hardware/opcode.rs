@@ -1365,7 +1365,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "DCP",
         func: dcp,
-        address_mode: AddressMode::IndirectY(false),
+        address_mode: AddressMode::IndirectY(true),
     },
     // 0xD4 -
     OpCode {
@@ -1413,7 +1413,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "DCP",
         func: dcp,
-        address_mode: AddressMode::AbsoluteIndexedY(false),
+        address_mode: AddressMode::AbsoluteIndexedY(true),
     },
     // 0xDC -
     OpCode {
@@ -1437,7 +1437,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "DCP",
         func: dcp,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0xE0 -
     OpCode {
@@ -1508,7 +1508,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     // 0xEB -
     OpCode {
         name: "SBC",
-        func: sbc_nop,
+        func: sbc,
         address_mode: AddressMode::Immediate,
     },
     // 0xEC -
@@ -1699,12 +1699,18 @@ fn do_inc(cpu: &mut Cpu, mode: AddressMode) -> u8 {
     result
 }
 
-fn dec(cpu: &mut Cpu, mode: AddressMode) {
+fn do_dec(cpu: &mut Cpu, mode: AddressMode) -> u8 {
     let address = cpu.operand_address(mode).address();
     let result = cpu.bus.read(address).wrapping_sub(1);
     cpu.bus.tick();
     cpu.bus.write(address, result);
     set_zero_and_negative(cpu, result);
+
+    result
+}
+
+fn dec(cpu: &mut Cpu, mode: AddressMode) {
+    do_dec(cpu, mode);
 }
 
 /* Stack Instructions */
@@ -1842,11 +1848,7 @@ fn adc(cpu: &mut Cpu, mode: AddressMode) {
 fn sbc(cpu: &mut Cpu, mode: AddressMode) {
     let a = cpu.a;
     let operand = !read_operand(cpu, mode);
-    let mut result = (a as u16).wrapping_add(operand as u16);
-
-    if cpu.get_flag(CpuStatus::Carry) {
-        result = result.wrapping_add(1);
-    }
+    let result = a as u16 + operand as u16 + cpu.carry() as u16;
 
     cpu.a = result as u8;
     set_zero_and_negative(cpu, result as u8);
@@ -2080,8 +2082,9 @@ fn bit(cpu: &mut Cpu, mode: AddressMode) {
 fn nop(cpu: &mut Cpu, mode: AddressMode) {
     if mode != AddressMode::Implied {
         let _ = read_operand(cpu, mode);
+    } else {
+        cpu.bus.tick();
     }
-    cpu.bus.tick();
 }
 
 // SEt Carry
@@ -2134,15 +2137,11 @@ fn brk(cpu: &mut Cpu, _mode: AddressMode) {
 }
 
 fn dcp(cpu: &mut Cpu, mode: AddressMode) {
-    let address = cpu.operand_address(mode).address();
-    let result = cpu.bus.read(address).wrapping_sub(1);
-    cpu.bus.write(address, result);
-
-    set_zero_and_negative(cpu, result);
+    let value = do_dec(cpu, mode);
 
     let a = cpu.a;
-    set_zero_and_negative(cpu, a.wrapping_sub(result));
-    cpu.set_flag(CpuStatus::Carry, a >= result);
+    set_zero_and_negative(cpu, a.wrapping_sub(value));
+    cpu.set_flag(CpuStatus::Carry, a >= value);
 }
 
 fn invalid(_cpu: &mut Cpu, _mode: AddressMode) {
@@ -2211,7 +2210,12 @@ fn branch(cpu: &mut Cpu, success: bool) {
 
     if success {
         cpu.bus.tick();
-        cpu.pc = cpu.pc.wrapping_add(offset as u16);
+        let new_pc = cpu.pc.wrapping_add(offset as u16);
+
+        if new_pc & 0xFF00 != cpu.pc & 0xFF00 {
+            cpu.bus.tick();
+        }
+        cpu.pc = new_pc;
     }
 }
 fn read_operand(cpu: &mut Cpu, mode: AddressMode) -> u8 {
