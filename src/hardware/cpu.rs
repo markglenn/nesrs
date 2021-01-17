@@ -16,8 +16,17 @@ pub enum CpuStatus {
     InterruptDisable = 2,
     Decimal = 3,
     Break = 4,
+    Push = 5,
     Overflow = 6,
     Negative = 7,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum InterruptType {
+    Nmi,
+    Reset,
+    Irq,
+    Break,
 }
 
 #[repr(u16)]
@@ -57,7 +66,7 @@ impl Cpu {
     pub fn reset(&mut self) {
         self.sp = 0xFD;
         self.p = 0x24;
-        self.interrupt(InterruptVector::Reset);
+        self.interrupt(InterruptType::Reset);
     }
 
     pub fn carry(&self) -> u8 {
@@ -72,7 +81,16 @@ impl Cpu {
     }
 
     pub fn execute_next_opcode(&mut self) {
-        let opcode = self.next_byte();
+        if self.bus.nmi.ready() {
+            self.bus.nmi.acknowledge();
+            self.interrupt(InterruptType::Nmi)
+        } else if self.bus.irq.ready() && !self.get_flag(CpuStatus::InterruptDisable) {
+            self.bus.irq.acknowledge();
+            self.interrupt(InterruptType::Irq)
+        }
+
+        let opcode = self.bus.unclocked_read(self.pc);
+        self.pc = self.pc.wrapping_add(1);
         execute(self, opcode);
     }
 
@@ -200,9 +218,31 @@ impl Cpu {
         AddressModeValue::Absolute(base_address.wrapping_add(self.y as u16))
     }
 
-    fn interrupt(&mut self, _interrupt: InterruptVector) {
-        // self.pc = self.bus.read_word(interrupt as u16);
-        self.pc = 0xC000;
+    fn interrupt(&mut self, interrupt: InterruptType) {
+        let ticks = match interrupt {
+            InterruptType::Nmi | InterruptType::Irq => 2,
+            InterruptType::Reset => 5,
+            InterruptType::Break => 1,
+        };
+
+        for _ in 0..ticks {
+            self.bus.tick();
+        }
+
+        if interrupt != InterruptType::Reset {
+            self.push_stack_16(self.pc);
+            self.push_stack(self.p | CpuStatus::Push as u8);
+            self.set_flag(CpuStatus::InterruptDisable, true);
+        }
+
+        let address = match interrupt {
+            InterruptType::Nmi => (InterruptVector::Nmi),
+            InterruptType::Reset => (InterruptVector::Reset),
+            InterruptType::Irq => (InterruptVector::Irq),
+            InterruptType::Break => (InterruptVector::Irq),
+        };
+
+        self.pc = self.bus.read_word(address as u16);
     }
 }
 
@@ -210,13 +250,8 @@ impl std::fmt::Debug for Cpu {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:3}",
-            self.a,
-            self.x,
-            self.y,
-            self.p,
-            self.sp,
-            ((self.bus.cyc - 1) * 3) % 341
+            "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} {:#?}",
+            self.a, self.x, self.y, self.p, self.sp, self.bus.ppu
         )
     }
 }
@@ -227,6 +262,7 @@ mod test {
 
     use super::*;
 
+    /*
     #[test]
     fn test_set_flag() {
         let cartridge = Box::new(NESRom::from_file("./priv/nestest.nes").unwrap());
@@ -240,6 +276,7 @@ mod test {
         cpu.set_flag(CpuStatus::Decimal, false);
         assert_eq!(cpu.p, 0b01110100);
     }
+    */
 
     #[test]
     fn test_get_flag() {

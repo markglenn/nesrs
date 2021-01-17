@@ -47,7 +47,7 @@ impl Header {
             Mirroring::Vertical
         };
 
-        let prg_ram_pages = usize::from(cmp::max(1, flags[FLAG8]));
+        let prg_ram_pages = cmp::max(1, flags[FLAG8]) as usize;
         let has_trainer = flags[0] & 0b100 > 0;
         let mapper = (flags[FLAG7] >> 4) | (flags[FLAG8] & 0xF0);
 

@@ -14,10 +14,10 @@ pub struct NRomMapper {
 
 impl NRomMapper {
     pub fn new(header: &Header) -> Self {
-        let nrom_type = match header.chr_rom_pages {
+        let nrom_type = match header.prg_rom_pages {
             1 => NRomType::NRom128,
             2 => NRomType::NRom256,
-            _ => panic!("Invalid NRom type {}", header.chr_rom_pages),
+            _ => panic!("Invalid NRom type {}", header.prg_rom_pages),
         };
 
         NRomMapper { nrom_type }
@@ -25,13 +25,13 @@ impl NRomMapper {
 }
 
 impl Mapper for NRomMapper {
-    fn map(&self, mut address: u16) -> u16 {
+    fn map(&self, address: u16) -> u16 {
         // NROM-128 has duplicate roms across 0x8000 and 0xC000
         if self.nrom_type == NRomType::NRom128 && address >= 0xC000 {
-            address -= 0x4000;
+            address - 0xC000
+        } else {
+            address - 0x8000
         }
-
-        address - 0x8000
     }
 
     fn mirroring(&self) -> super::Mirroring {
