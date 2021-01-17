@@ -138,6 +138,7 @@ impl Cpu {
 
     fn zero_page_index_read(&mut self, register: u8) -> AddressModeValue {
         let offset = self.next_byte() as u16;
+        self.bus.tick();
         AddressModeValue::Absolute((offset + register as u16) % 256)
     }
 

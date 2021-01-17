@@ -279,7 +279,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ASL",
         func: asl,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0x1F -
     OpCode {
@@ -471,7 +471,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ROL",
         func: rol,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0x3F -
     OpCode {
@@ -663,7 +663,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "LSR",
         func: lsr,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0x5F -
     OpCode {
@@ -855,7 +855,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ROR",
         func: ror,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0x7F -
     OpCode {
@@ -1017,7 +1017,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "STA",
         func: sta,
-        address_mode: AddressMode::AbsoluteIndexedY(false),
+        address_mode: AddressMode::AbsoluteIndexedY(true),
     },
     // 0x9A -
     OpCode {
@@ -1041,7 +1041,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "STA",
         func: sta,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0x9E -
     OpCode {
@@ -1431,7 +1431,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "DEC",
         func: dec,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0xDF -
     OpCode {
@@ -1623,7 +1623,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "INC",
         func: inc,
-        address_mode: AddressMode::AbsoluteIndexedX(false),
+        address_mode: AddressMode::AbsoluteIndexedX(true),
     },
     // 0xFF -
     OpCode {
