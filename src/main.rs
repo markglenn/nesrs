@@ -9,7 +9,7 @@ use cartridge::rom::NESRom;
 use hardware::cpu::Cpu;
 
 fn main() {
-    let cartridge = Box::new(NESRom::from_file("priv/nestest.nes").unwrap());
+    let cartridge = Box::new(NESRom::from_file("priv/color_test.nes").unwrap());
     let mut cpu = Cpu::new(cartridge);
     cpu.reset();
 
@@ -19,7 +19,7 @@ fn main() {
         print!("{:7}  ", i);
         cpu.execute_next_opcode();
 
-        if i >= 8991 {
+        if i >= 10000000 {
             panic!();
         }
     }

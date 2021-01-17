@@ -27,6 +27,9 @@ pub fn execute(cpu: &mut Cpu, code: u8) {
 
     print_debug(code, opcode, cpu);
 
+    // Tick for the time required to pull the opcode
+    cpu.bus.tick();
+
     (opcode.func)(cpu, opcode.address_mode);
 }
 
@@ -48,39 +51,14 @@ fn print_debug(code: u8, opcode: &OpCode, cpu: &mut Cpu) {
     };
 
     let operation = match opcode.address_mode {
-        AddressMode::Immediate => {
-            format!("{:3} #${:02X}", opcode.name, cpu.bus.unclocked_read(cpu.pc))
-        }
-        AddressMode::Indirect => {
-            let address = cpu.bus.unclocked_read_word(cpu.pc);
-            let memory_value = cpu.bus.unclocked_read_word(address);
-            format!(
-                "{:3} (${:04X}) = {:04X}",
-                opcode.name, address, memory_value
-            )
-        }
-        AddressMode::Absolute => {
-            let address = cpu.bus.unclocked_read_word(cpu.pc);
-            format!(
-                "{:3} ${:04X} = {:02X}",
-                opcode.name,
-                address,
-                cpu.bus.unclocked_read(address)
-            )
-        }
-        AddressMode::Offset => format!(
-            "{:3} ${:04X}",
-            opcode.name,
-            cpu.pc
-                .wrapping_add(cpu.bus.unclocked_read(cpu.pc) as i8 as u16)
-                .wrapping_add(1)
-        ),
-        AddressMode::ZeroPage => {
-            let operand = cpu.bus.unclocked_read(cpu.pc);
-            let value = cpu.bus.unclocked_read(operand as u16);
-            format!("{:3} ${:02X} = ${:02X}", opcode.name, operand, value)
-        }
         AddressMode::Implied => format!("{:3}", opcode.name),
+        AddressMode::Absolute => {
+            format!(
+                "{:3} #{:04X}",
+                opcode.name,
+                cpu.bus.unclocked_read_word(cpu.pc)
+            )
+        }
         _ => format!("{:3} ${:02X}", opcode.name, cpu.bus.unclocked_read(cpu.pc)),
     };
 
@@ -625,8 +603,8 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x58 -
     OpCode {
-        name: "INV",
-        func: invalid,
+        name: "CLI",
+        func: cli,
         address_mode: AddressMode::Implied,
     },
     // 0x59 -
@@ -2158,11 +2136,6 @@ fn lax(cpu: &mut Cpu, mode: AddressMode) {
 fn sax(cpu: &mut Cpu, mode: AddressMode) {
     let address = cpu.operand_address(mode).address();
     cpu.bus.write(address, cpu.a & cpu.x);
-}
-
-fn sbc_nop(cpu: &mut Cpu, mode: AddressMode) {
-    sbc(cpu, mode);
-    nop(cpu, AddressMode::Implied);
 }
 
 fn isc(cpu: &mut Cpu, mode: AddressMode) {
