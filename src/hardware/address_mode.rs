@@ -20,18 +20,18 @@ impl AddressModeValue {
 }
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AddressMode {
-    ZeroPage,         // val = PEEK(arg)
-    ZeroPageIndexedX, // val = PEEK((arg + X) % 256)
-    ZeroPageIndexedY, // val = PEEK((arg + Y) % 256)
-    Absolute,         // val = PEEK(arg)
-    AbsoluteIndexedX, // val = PEEK(arg + X)
-    AbsoluteIndexedY, // val = PEEK(arg + Y)
-    Indirect,         // val = PEEK(arg) + (PEEK(arg + 1) * 256)
-    IndirectX,        // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-    IndirectY,        // val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
-    Immediate,        // val = arg
-    Implied,          // nop
-    Offset,           // Offset from current PC
+    ZeroPage,               // val = PEEK(arg)
+    ZeroPageIndexedX,       // val = PEEK((arg + X) % 256)
+    ZeroPageIndexedY,       // val = PEEK((arg + Y) % 256)
+    Absolute,               // val = PEEK(arg)
+    AbsoluteIndexedX(bool), // val = PEEK(arg + X)
+    AbsoluteIndexedY(bool), // val = PEEK(arg + Y)
+    Indirect,               // val = PEEK(arg) + (PEEK(arg + 1) * 256)
+    IndirectX,              // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
+    IndirectY(bool),        // val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
+    Immediate,              // val = arg
+    Implied,                // nop
+    Offset,                 // Offset from current PC
 }
 
 impl fmt::Debug for AddressModeValue {

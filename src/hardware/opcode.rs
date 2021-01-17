@@ -33,8 +33,8 @@ pub fn execute(cpu: &mut Cpu, code: u8) {
 fn print_debug(code: u8, opcode: &OpCode, cpu: &mut Cpu) {
     let bytes = match opcode.address_mode {
         AddressMode::Absolute
-        | AddressMode::AbsoluteIndexedX
-        | AddressMode::AbsoluteIndexedY
+        | AddressMode::AbsoluteIndexedX(false)
+        | AddressMode::AbsoluteIndexedY(false)
         | AddressMode::Indirect => {
             format!(
                 "{:02X} {:02X} {:02X}",
@@ -201,7 +201,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ORA",
         func: ora,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x12 -
     OpCode {
@@ -213,7 +213,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "SLO",
         func: slo,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x14 -
     OpCode {
@@ -249,7 +249,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ORA",
         func: ora,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x1A -
     OpCode {
@@ -261,31 +261,31 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "SLO",
         func: slo,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x1C -
     OpCode {
         name: "NOP",
         func: nop,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x1D -
     OpCode {
         name: "ORA",
         func: ora,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x1E -
     OpCode {
         name: "ASL",
         func: asl,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x1F -
     OpCode {
         name: "SLO",
         func: slo,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x20 -
     OpCode {
@@ -393,7 +393,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "AND",
         func: and,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x32 -
     OpCode {
@@ -405,7 +405,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "RLA",
         func: rla,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x34 -
     OpCode {
@@ -441,7 +441,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "AND",
         func: and,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x3A -
     OpCode {
@@ -453,31 +453,31 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "RLA",
         func: rla,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x3C -
     OpCode {
         name: "NOP",
         func: nop,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x3D -
     OpCode {
         name: "AND",
         func: and,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x3E -
     OpCode {
         name: "ROL",
         func: rol,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x3F -
     OpCode {
         name: "RLA",
         func: rla,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x40 -
     OpCode {
@@ -585,7 +585,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "EOR",
         func: eor,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x52 -
     OpCode {
@@ -597,7 +597,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "SRE",
         func: sre,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x54 -
     OpCode {
@@ -633,7 +633,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "EOR",
         func: eor,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x5A -
     OpCode {
@@ -645,31 +645,31 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "SRE",
         func: sre,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x5C -
     OpCode {
         name: "NOP",
         func: nop,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x5D -
     OpCode {
         name: "EOR",
         func: eor,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x5E -
     OpCode {
         name: "LSR",
         func: lsr,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x5F -
     OpCode {
         name: "SRE",
         func: sre,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x60 -
     OpCode {
@@ -777,7 +777,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ADC",
         func: adc,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x72 -
     OpCode {
@@ -789,7 +789,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "RRA",
         func: rra,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0x74 -
     OpCode {
@@ -825,7 +825,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ADC",
         func: adc,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x7A -
     OpCode {
@@ -837,31 +837,31 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "RRA",
         func: rra,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x7C -
     OpCode {
         name: "NOP",
         func: nop,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x7D -
     OpCode {
         name: "ADC",
         func: adc,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x7E -
     OpCode {
         name: "ROR",
         func: ror,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x7F -
     OpCode {
         name: "RRA",
         func: rra,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x80 -
     OpCode {
@@ -969,7 +969,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "STA",
         func: sta,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(true),
     },
     // 0x92 -
     OpCode {
@@ -1017,7 +1017,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "STA",
         func: sta,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0x9A -
     OpCode {
@@ -1041,7 +1041,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "STA",
         func: sta,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0x9E -
     OpCode {
@@ -1161,7 +1161,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "LDA",
         func: lda,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0xB2 -
     OpCode {
@@ -1173,7 +1173,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "LAX",
         func: lax,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0xB4 -
     OpCode {
@@ -1209,7 +1209,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "LDA",
         func: lda,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0xBA -
     OpCode {
@@ -1227,25 +1227,25 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "LDY",
         func: ldy,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xBD -
     OpCode {
         name: "LDA",
         func: lda,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xBE -
     OpCode {
         name: "LDX",
         func: ldx,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0xBF -
     OpCode {
         name: "LAX",
         func: lax,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0xC0 -
     OpCode {
@@ -1353,7 +1353,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "CMP",
         func: cmp,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0xD2 -
     OpCode {
@@ -1365,7 +1365,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "DCP",
         func: dcp,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0xD4 -
     OpCode {
@@ -1401,7 +1401,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "CMP",
         func: cmp,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0xDA -
     OpCode {
@@ -1413,31 +1413,31 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "DCP",
         func: dcp,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0xDC -
     OpCode {
         name: "NOP",
         func: nop,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xDD -
     OpCode {
         name: "CMP",
         func: cmp,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xDE -
     OpCode {
         name: "DEC",
         func: dec,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xDF -
     OpCode {
         name: "DCP",
         func: dcp,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xE0 -
     OpCode {
@@ -1545,7 +1545,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "SBC",
         func: sbc,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0xF2 -
     OpCode {
@@ -1557,7 +1557,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ISC",
         func: isc,
-        address_mode: AddressMode::IndirectY,
+        address_mode: AddressMode::IndirectY(false),
     },
     // 0xF4 -
     OpCode {
@@ -1593,7 +1593,7 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "SBC",
         func: sbc,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0xFA -
     OpCode {
@@ -1605,31 +1605,31 @@ pub static OPCODES: [OpCode; 0x100] = [
     OpCode {
         name: "ISC",
         func: isc,
-        address_mode: AddressMode::AbsoluteIndexedY,
+        address_mode: AddressMode::AbsoluteIndexedY(false),
     },
     // 0xFC -
     OpCode {
         name: "NOP",
         func: nop,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xFD -
     OpCode {
         name: "SBC",
         func: sbc,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xFE -
     OpCode {
         name: "INC",
         func: inc,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
     // 0xFF -
     OpCode {
         name: "ISC",
         func: isc,
-        address_mode: AddressMode::AbsoluteIndexedX,
+        address_mode: AddressMode::AbsoluteIndexedX(false),
     },
 ];
 
@@ -1691,6 +1691,7 @@ fn inc(cpu: &mut Cpu, mode: AddressMode) {
 fn do_inc(cpu: &mut Cpu, mode: AddressMode) -> u8 {
     let address = cpu.operand_address(mode).address();
     let result = cpu.bus.read(address).wrapping_add(1);
+    cpu.bus.tick();
     cpu.bus.write(address, result);
 
     set_zero_and_negative(cpu, result);
@@ -1701,8 +1702,8 @@ fn do_inc(cpu: &mut Cpu, mode: AddressMode) -> u8 {
 fn dec(cpu: &mut Cpu, mode: AddressMode) {
     let address = cpu.operand_address(mode).address();
     let result = cpu.bus.read(address).wrapping_sub(1);
+    cpu.bus.tick();
     cpu.bus.write(address, result);
-
     set_zero_and_negative(cpu, result);
 }
 
@@ -1974,6 +1975,7 @@ fn do_lsr(cpu: &mut Cpu, mode: AddressMode) -> u8 {
     let value = operand >> 1;
 
     cpu.set_flag(CpuStatus::Carry, operand & 1 != 0);
+    cpu.bus.tick();
     set_zero_and_negative(cpu, value);
     cpu.bus.write(address, value);
 
@@ -1997,6 +1999,7 @@ fn do_asl(cpu: &mut Cpu, mode: AddressMode) -> u8 {
     let value = operand << 1;
 
     cpu.set_flag(CpuStatus::Carry, operand & 0x80 != 0);
+    cpu.bus.tick();
     set_zero_and_negative(cpu, value);
     cpu.bus.write(address, value);
 
@@ -2013,6 +2016,7 @@ fn ror_a(cpu: &mut Cpu, _mode: AddressMode) {
     cpu.set_flag(CpuStatus::Carry, cpu.a & 1 != 0);
     cpu.a = value;
     set_zero_and_negative(cpu, value);
+    cpu.bus.tick();
 }
 
 fn ror(cpu: &mut Cpu, mode: AddressMode) {
@@ -2026,6 +2030,7 @@ fn do_ror(cpu: &mut Cpu, mode: AddressMode) -> u8 {
 
     cpu.set_flag(CpuStatus::Carry, operand & 1 != 0);
     set_zero_and_negative(cpu, value);
+    cpu.bus.tick();
     cpu.bus.write(address, value);
 
     value
@@ -2039,6 +2044,7 @@ fn rol_a(cpu: &mut Cpu, _mode: AddressMode) {
     }
 
     cpu.set_flag(CpuStatus::Carry, cpu.a & 0x80 != 0);
+    cpu.bus.tick();
     cpu.a = value;
     set_zero_and_negative(cpu, value);
 }
@@ -2053,6 +2059,7 @@ fn do_rol(cpu: &mut Cpu, mode: AddressMode) -> u8 {
     let value = (operand << 1) | cpu.carry();
 
     cpu.set_flag(CpuStatus::Carry, operand & 0x80 != 0);
+    cpu.bus.tick();
     set_zero_and_negative(cpu, value);
     cpu.bus.write(address, value);
 
