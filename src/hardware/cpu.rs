@@ -67,6 +67,10 @@ impl Cpu {
         }
     }
 
+    pub fn crossed_page(address: u16, offset: u8) -> bool {
+        (address.wrapping_add(offset as u16)) & 0xFF00 != address & 0xFF00
+    }
+
     pub fn execute_next_opcode(&mut self) {
         let opcode = self.next_byte();
         execute(self, opcode);
@@ -122,11 +126,11 @@ impl Cpu {
             AddressMode::ZeroPageIndexedX => self.zero_page_index_read(self.x),
             AddressMode::ZeroPageIndexedY => self.zero_page_index_read(self.y),
             AddressMode::Absolute => self.absolute_read(),
-            AddressMode::AbsoluteIndexedX => self.absolute_index_read(self.x),
-            AddressMode::AbsoluteIndexedY => self.absolute_index_read(self.y),
+            AddressMode::AbsoluteIndexedX(forced) => self.absolute_index_read(self.x, forced),
+            AddressMode::AbsoluteIndexedY(forced) => self.absolute_index_read(self.y, forced),
             AddressMode::Indirect => self.indirect_read(),
             AddressMode::IndirectX => self.indirect_x_read(),
-            AddressMode::IndirectY => self.indirect_y_read(),
+            AddressMode::IndirectY(forced) => self.indirect_y_read(forced),
             AddressMode::Immediate => AddressModeValue::Immediate(self.next_byte()),
             _ => panic!("Invalid operand address"),
         }
@@ -145,21 +149,14 @@ impl Cpu {
         AddressModeValue::Absolute(self.next_word())
     }
 
-    fn absolute_index_read(&mut self, register: u8) -> AddressModeValue {
-        let offset = self.next_word();
-        AddressModeValue::Absolute(offset.wrapping_add(register as u16))
-    }
+    fn absolute_index_read(&mut self, register: u8, is_forced: bool) -> AddressModeValue {
+        let address = self.next_word();
 
-    fn indirect_x_read(&mut self) -> AddressModeValue {
-        // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-        let arg_x = (self.next_byte() as u16).wrapping_add(self.x as u16);
-        let low_address = arg_x % 256;
-        let high_address = arg_x.wrapping_add(1) % 256;
+        if is_forced || Cpu::crossed_page(address, register) {
+            self.bus.tick();
+        }
 
-        let low_byte = self.bus.read(low_address) as u16;
-        let high_byte = self.bus.read(high_address) as u16;
-
-        AddressModeValue::Absolute(low_byte | high_byte << 8)
+        AddressModeValue::Absolute(address.wrapping_add(register as u16))
     }
 
     fn indirect_read(&mut self) -> AddressModeValue {
@@ -169,19 +166,37 @@ impl Cpu {
         } else {
             address + 1
         };
+
         let low_byte = self.bus.read(address) as u16;
         let high_byte = self.bus.read(high_address) as u16;
 
         AddressModeValue::Absolute(low_byte | (high_byte << 8))
     }
 
-    fn indirect_y_read(&mut self) -> AddressModeValue {
+    fn indirect_x_read(&mut self) -> AddressModeValue {
+        // val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
+        self.bus.tick();
+        let arg_x = (self.next_byte() as u16).wrapping_add(self.x as u16);
+        let low_address = arg_x % 256;
+        let high_address = arg_x.wrapping_add(1) % 256;
+
+        let low_byte = self.bus.read(low_address) as u16;
+        let high_byte = self.bus.read(high_address) as u16;
+
+        AddressModeValue::Absolute(low_byte | high_byte << 8)
+    }
+    fn indirect_y_read(&mut self, is_forced: bool) -> AddressModeValue {
         let arg = self.next_byte() as u16;
 
         let low_byte = self.bus.read(arg as u16) as u16;
         let high_byte = self.bus.read((arg + 1) & 0xFF) as u16;
 
-        AddressModeValue::Absolute((low_byte | high_byte << 8).wrapping_add(self.y as u16))
+        let base_address = low_byte | high_byte << 8;
+        if is_forced || Cpu::crossed_page(base_address, self.y) {
+            self.bus.tick();
+        }
+
+        AddressModeValue::Absolute(base_address.wrapping_add(self.y as u16))
     }
 
     fn interrupt(&mut self, _interrupt: InterruptVector) {
