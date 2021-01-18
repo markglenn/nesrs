@@ -51,7 +51,6 @@ fn main() {
     let mut i = 0;
     loop {
         i += 1;
-        print!("{:7}  ", i);
         cpu.execute_next_opcode();
 
         if i % 30_000 == 0 {

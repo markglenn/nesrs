@@ -35,7 +35,8 @@ fn sprite_palette(ppu: &Ppu, pallete_idx: u8) -> [u8; 4] {
         ppu.palette_table[start + 2],
     ]
 }
-pub fn render(ppu: &Ppu, frame: &mut Frame) {
+
+fn render_background(ppu: &Ppu, frame: &mut Frame) {
     let bank = ppu.ctrl.background_pattern_address();
 
     for i in 0..0x3c0 {
@@ -64,50 +65,70 @@ pub fn render(ppu: &Ppu, frame: &mut Frame) {
             }
         }
     }
+}
 
-    for i in (0..ppu.oam_data.len()).step_by(4).rev() {
-        let tile_idx = ppu.oam_data[i + 1] as u16;
-        let tile_x = ppu.oam_data[i + 3] as usize;
-        let tile_y = ppu.oam_data[i] as usize;
+fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize, is_behind: bool) {
+    let tile_y = ppu.oam_data[i + 0] as usize;
+    let tile_x = ppu.oam_data[i + 3] as usize;
+    let tile_idx = ppu.oam_data[i + 1] as usize;
+    let attributes = ppu.oam_data[i + 2];
 
-        let flip_vertical = if ppu.oam_data[i + 2] >> 7 & 1 == 1 {
-            true
-        } else {
-            false
-        };
-        let flip_horizontal = if ppu.oam_data[i + 2] >> 6 & 1 == 1 {
-            true
-        } else {
-            false
-        };
-        let pallette_idx = ppu.oam_data[i + 2] & 0b11;
-        let sprite_palette = sprite_palette(ppu, pallette_idx);
-        let bank: u16 = ppu.ctrl.sprite_pattern_address();
+    let flip_vertical = attributes & 0b1000_0000 != 0;
+    let flip_horizontal = attributes & 0b0100_0000 != 0;
+    let palette_idx = attributes & 0b0000_0011;
+    let priority = attributes & 0b0010_0000 != 0;
 
-        let tile =
-            &ppu.chr_rom[(bank + tile_idx * 16) as usize..=(bank + tile_idx * 16 + 15) as usize];
+    if priority != is_behind {
+        return;
+    }
 
-        for y in 0..=7 {
-            let mut upper = tile[y];
-            let mut lower = tile[y + 8];
-            'ololo: for x in (0..=7).rev() {
-                let value = (1 & lower) << 1 | (1 & upper);
-                upper = upper >> 1;
-                lower = lower >> 1;
-                let rgb = match value {
-                    0 => continue 'ololo, // skip coloring the pixel
-                    1 => palette::SYSTEM_PALETTE[sprite_palette[1] as usize],
-                    2 => palette::SYSTEM_PALETTE[sprite_palette[2] as usize],
-                    3 => palette::SYSTEM_PALETTE[sprite_palette[3] as usize],
-                    _ => panic!(),
-                };
-                match (flip_horizontal, flip_vertical) {
-                    (false, false) => frame.set_pixel(tile_x + x, tile_y + y, rgb),
-                    (true, false) => frame.set_pixel(tile_x + 7 - x, tile_y + y, rgb),
-                    (false, true) => frame.set_pixel(tile_x + x, tile_y + 7 - y, rgb),
-                    (true, true) => frame.set_pixel(tile_x + 7 - x, tile_y + 7 - y, rgb),
-                }
-            }
+    let sprite_palette = sprite_palette(ppu, palette_idx);
+
+    let bank = ppu.ctrl.sprite_pattern_address() as usize;
+
+    let offset = bank + tile_idx * 16;
+    let tile = &ppu.chr_rom[offset..=offset + 15];
+
+    for y in 0..=7 {
+        let mut upper = tile[y];
+        let mut lower = tile[y + 8];
+
+        for x in (0..=7).rev() {
+            let value = (1 & lower) << 1 | (1 & upper);
+            upper = upper >> 1;
+            lower = lower >> 1;
+
+            let rgb = match value {
+                0 => continue, // skip pixel
+                1 => palette::SYSTEM_PALETTE[sprite_palette[1] as usize],
+                2 => palette::SYSTEM_PALETTE[sprite_palette[2] as usize],
+                3 => palette::SYSTEM_PALETTE[sprite_palette[3] as usize],
+                _ => unimplemented!(),
+            };
+
+            let actual_x = match flip_horizontal {
+                false => tile_x + x,
+                true => tile_x + 7 - x,
+            };
+
+            let actual_y = match flip_vertical {
+                false => tile_y + y,
+                true => tile_y + 7 - y,
+            };
+
+            frame.set_pixel(actual_x, actual_y, rgb);
         }
+    }
+}
+
+pub fn render(ppu: &Ppu, frame: &mut Frame) {
+    for i in (0..64).rev() {
+        render_sprite(ppu, frame, i * 4, true);
+    }
+
+    render_background(ppu, frame);
+
+    for i in (0..64).rev() {
+        render_sprite(ppu, frame, i * 4, false);
     }
 }

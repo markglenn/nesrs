@@ -25,7 +25,7 @@ impl fmt::Debug for OpCode<'_> {
 pub fn execute(cpu: &mut Cpu, code: u8) {
     let opcode = &OPCODES[code as usize];
 
-    print_debug(code, opcode, cpu);
+    //print_debug(code, opcode, cpu);
 
     // Tick for the time required to pull the opcode
     cpu.bus.tick();
@@ -33,6 +33,7 @@ pub fn execute(cpu: &mut Cpu, code: u8) {
     (opcode.func)(cpu, opcode.address_mode);
 }
 
+#[allow(dead_code)]
 fn print_debug(code: u8, opcode: &OpCode, cpu: &mut Cpu) {
     let bytes = match opcode.address_mode {
         AddressMode::Absolute
