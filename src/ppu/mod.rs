@@ -25,7 +25,7 @@ pub struct Ppu {
     mirroring: Mirroring, // Mirroring mode
 
     pub ctrl: ControlRegister, // 0x2000
-    mask: MaskRegister,        // 0x2001
+    pub mask: MaskRegister,    // 0x2001
     status: StatusRegister,    // 0x2002
     scroll: ScrollRegister,    // 0x2005
     addr: AddressRegister,     // 0x2006
@@ -136,6 +136,12 @@ impl Ppu {
 
         if self.ctrl.generate_nmi() {
             nmi.schedule(1);
+        }
+    }
+
+    pub fn write_oam_dma(&mut self, data: &[u8]) {
+        for i in 0..256 {
+            self.write_oam_data(data[i]);
         }
     }
 

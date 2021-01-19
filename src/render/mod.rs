@@ -14,7 +14,7 @@ fn bg_pallette(ppu: &Ppu, tile_column: usize, tile_row: usize) -> [u8; 4] {
         (1, 0) => (attr_byte >> 2) & 0b11,
         (0, 1) => (attr_byte >> 4) & 0b11,
         (1, 1) => (attr_byte >> 6) & 0b11,
-        (_, _) => panic!("should not happen"),
+        _ => unimplemented!(),
     };
 
     let pallete_start: usize = 1 + (pallet_idx as usize) * 4;
@@ -67,7 +67,7 @@ fn render_background(ppu: &Ppu, frame: &mut Frame) {
     }
 }
 
-fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize, is_behind: bool) {
+fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
     let tile_y = ppu.oam_data[i + 0] as usize;
     let tile_x = ppu.oam_data[i + 3] as usize;
     let tile_idx = ppu.oam_data[i + 1] as usize;
@@ -76,11 +76,7 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize, is_behind: bool) {
     let flip_vertical = attributes & 0b1000_0000 != 0;
     let flip_horizontal = attributes & 0b0100_0000 != 0;
     let palette_idx = attributes & 0b0000_0011;
-    let priority = attributes & 0b0010_0000 != 0;
-
-    if priority != is_behind {
-        return;
-    }
+    let _priority = attributes & 0b0010_0000 != 0;
 
     let sprite_palette = sprite_palette(ppu, palette_idx);
 
@@ -122,13 +118,9 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize, is_behind: bool) {
 }
 
 pub fn render(ppu: &Ppu, frame: &mut Frame) {
-    for i in (0..64).rev() {
-        render_sprite(ppu, frame, i * 4, true);
-    }
-
     render_background(ppu, frame);
 
     for i in (0..64).rev() {
-        render_sprite(ppu, frame, i * 4, false);
+        render_sprite(ppu, frame, i * 4);
     }
 }

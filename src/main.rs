@@ -11,7 +11,22 @@ use hardware::cpu::Cpu;
 use render::frame::Frame;
 use sdl2::{event::Event, keyboard::Keycode, pixels::PixelFormatEnum, EventPump};
 
-fn handle_user_input(_cpu: &mut Cpu, event_pump: &mut EventPump) {
+fn handle_key(cpu: &mut Cpu, keycode: Keycode, keydown: bool) {
+    let joypad = &mut cpu.bus.joypad1;
+    match keycode {
+        Keycode::Up => joypad.buttons.set_up(keydown),
+        Keycode::Left => joypad.buttons.set_left(keydown),
+        Keycode::Down => joypad.buttons.set_down(keydown),
+        Keycode::Right => joypad.buttons.set_right(keydown),
+        Keycode::Return => joypad.buttons.set_start(keydown),
+        Keycode::Space => joypad.buttons.set_select(keydown),
+        Keycode::A => joypad.buttons.set_button_a(keydown),
+        Keycode::D => joypad.buttons.set_button_b(keydown),
+        _ => (),
+    }
+}
+
+fn handle_user_input(cpu: &mut Cpu, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -19,6 +34,14 @@ fn handle_user_input(_cpu: &mut Cpu, event_pump: &mut EventPump) {
                 keycode: Some(Keycode::Escape),
                 ..
             } => std::process::exit(0),
+            Event::KeyDown {
+                keycode: Some(keycode),
+                ..
+            } => handle_key(cpu, keycode, true),
+            Event::KeyUp {
+                keycode: Some(keycode),
+                ..
+            } => handle_key(cpu, keycode, false),
             _ => (),
         }
     }
@@ -28,7 +51,7 @@ fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
-        .window("Tile viewer", (256.0 * 3.0) as u32, (240.0 * 3.0) as u32)
+        .window("NES-RS", (256.0 * 3.0) as u32, (240.0 * 3.0) as u32)
         .position_centered()
         .build()
         .unwrap();
@@ -42,7 +65,7 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let cartridge = Box::new(NESRom::from_file("priv/pacman.nes").unwrap());
+    let cartridge = Box::new(NESRom::from_file("priv/nestest.nes").unwrap());
     let mut cpu = Cpu::new(cartridge);
     cpu.reset();
 
@@ -59,7 +82,7 @@ fn main() {
 
             canvas.copy(&texture, None, None).unwrap();
             canvas.present();
+            handle_user_input(&mut cpu, &mut event_pump);
         }
-        handle_user_input(&mut cpu, &mut event_pump);
     }
 }
