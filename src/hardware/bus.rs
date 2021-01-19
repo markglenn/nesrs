@@ -1,6 +1,7 @@
 use crate::{apu::Apu, cartridge::rom::NESRom, ppu::Ppu};
 
 use super::interrupt::Interrupt;
+use super::joypad::Joypad;
 
 const RAM_SIZE: usize = 0x800;
 pub struct Bus {
@@ -11,6 +12,8 @@ pub struct Bus {
     pub cycles: u64,
     pub nmi: Interrupt,
     pub irq: Interrupt,
+
+    pub joypad1: Joypad,
 }
 
 impl Bus {
@@ -26,6 +29,7 @@ impl Bus {
             cycles: 0,
             nmi: Interrupt::new(),
             irq: Interrupt::new(),
+            joypad1: Joypad::new(),
         }
     }
 
@@ -39,7 +43,9 @@ impl Bus {
         match address {
             0..=0x1FFF => self.ram[(address & 0x7FF) as usize],
             0x2000..=0x3FFF => self.ppu.read(address),
-            0x4000..=0x4017 => self.apu.read(address),
+            0x4000..=0x4015 => self.apu.read(address),
+            0x4016 => self.joypad1.read(),
+            0x4017 => 0,
             0x4018..=0x401F => {
                 panic!("Reading from APU and I/O functionality that is normally disabled.")
             }
@@ -67,7 +73,14 @@ impl Bus {
         match address {
             0..=0x1FFF => self.ram[(address & 0x7FF) as usize] = data,
             0x2000..=0x3FFF => self.ppu.write(address, data),
-            0x4000..=0x4017 => self.apu.write(address, data),
+            0x4014 => {
+                let offset = (data as usize) << 8;
+                let buffer = &self.ram[offset..offset + 256];
+                self.ppu.write_oam_dma(buffer);
+            }
+            0x4000..=0x4015 => self.apu.write(address, data),
+            0x4016 => self.joypad1.write(data),
+            0x4017 => {}
             0x4018..=0x401F => panic!("APU and I/O functionality that is normally disabled."),
             0x4020..=0xFFFF => self.cartridge.write(address, data),
         };
