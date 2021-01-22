@@ -65,7 +65,9 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let cartridge = Box::new(NESRom::from_file("priv/nestest.nes").unwrap());
+    let cartridge = Box::new(
+        NESRom::from_file("../nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes").unwrap(),
+    );
     let mut cpu = Cpu::new(cartridge);
     cpu.reset();
 
@@ -76,7 +78,7 @@ fn main() {
         i += 1;
         cpu.execute_next_opcode();
 
-        if i % 30_000 == 0 {
+        if i % 10_000 == 0 {
             render::render(&cpu.bus.ppu, &mut frame);
             texture.update(None, &frame.data, 256 * 3).unwrap();
 

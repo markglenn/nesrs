@@ -100,7 +100,15 @@ impl Ppu {
                 self.internal = self.vram[self.mirror_vram_addr(address) as usize];
                 result
             }
-            0x3F00..=0x3FFF => self.palette_table[(address & 0x1F) as usize],
+            0x3F00..=0x3FFF => {
+                // 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C are mirrors
+                let mask = if address & 0x11 == 0x10 { 0x0F } else { 0x1F };
+
+                // Side effect: When reading from palette, it also reads from VRAM into buffer
+                self.internal = self.vram[self.mirror_vram_addr(address) as usize];
+
+                self.palette_table[(address & mask) as usize]
+            }
             _ => unimplemented!("Attempted to read from #{:04X}", address),
         }
     }
@@ -110,10 +118,13 @@ impl Ppu {
         self.addr.increment(self.ctrl.vram_address_increment());
 
         match address {
-            0..=0x1FFF => self.chr_rom[address as usize] = data, //unimplemented!("Attempted to write to #{:04X}", address),
+            0..=0x1FFF => self.chr_rom[address as usize] = data,
             0x2000..=0x3EFF => self.vram[self.mirror_vram_addr(address) as usize] = data,
+            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => {
+                self.palette_table[(address & 0x0F) as usize] = data
+            }
             0x3F00..=0x3FFF => self.palette_table[(address & 0x1F) as usize] = data,
-            _ => panic!(),
+            _ => unimplemented!("Attempted to write to #{:04X}", address),
         }
     }
 
@@ -125,7 +136,11 @@ impl Ppu {
             self.scanline += 1;
             match self.scanline {
                 241 => self.start_vblank(nmi),
-                261 => self.scanline = 0,
+                261 => {
+                    // No longer in vblank
+                    self.status.set_vblank(false);
+                    self.scanline = 0;
+                }
                 _ => (),
             }
         }

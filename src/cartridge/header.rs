@@ -64,4 +64,8 @@ impl Header {
             mirroring,
         });
     }
+
+    pub fn prg_ram_size(&self) -> usize {
+        self.prg_ram_pages * 0x2000
+    }
 }
