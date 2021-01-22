@@ -39,6 +39,10 @@ fn sprite_palette(ppu: &Ppu, pallete_idx: u8) -> [u8; 4] {
 fn render_background(ppu: &Ppu, frame: &mut Frame) {
     let bank = ppu.ctrl.background_pattern_address();
 
+    if ppu.chr_rom.len() == 0 {
+        return;
+    }
+
     for i in 0..0x3c0 {
         let tile = ppu.vram[i] as u16;
         let tile_column = i % 32;
@@ -68,6 +72,10 @@ fn render_background(ppu: &Ppu, frame: &mut Frame) {
 }
 
 fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
+    if ppu.chr_rom.len() == 0 {
+        return;
+    }
+
     let tile_y = ppu.oam_data[i + 0] as usize;
     let tile_x = ppu.oam_data[i + 3] as usize;
     let tile_idx = ppu.oam_data[i + 1] as usize;

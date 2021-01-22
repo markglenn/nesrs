@@ -21,10 +21,13 @@ impl NESRom {
             stream.seek(SeekFrom::Current(512))?;
         }
 
-        let mapper = MapperFactory::create(&header);
-        let mut data = vec![0; header.prg_rom_pages * 0x4000 + header.chr_rom_pages * 0x2000];
+        let length =
+            header.prg_ram_size() + header.prg_rom_pages * 0x4000 + header.chr_rom_pages * 0x2000;
 
-        stream.read_exact(&mut data)?;
+        let mapper = MapperFactory::create(&header);
+        let mut data = vec![0; length];
+
+        stream.read_exact(&mut data[header.prg_ram_size()..length])?;
 
         Ok(NESRom {
             header,
@@ -34,10 +37,14 @@ impl NESRom {
     }
 
     pub fn chr_rom(&self) -> Vec<u8> {
-        let start = self.header.prg_rom_pages * 0x4000;
-        let length = self.header.chr_rom_pages * 0x2000;
+        if self.header.chr_rom_pages > 0 {
+            let start = self.header.prg_rom_pages * 0x4000 + self.header.prg_ram_pages * 0x2000;
+            let length = self.header.chr_rom_pages * 0x2000;
 
-        self.data[start..start + length].to_vec()
+            self.data[start..start + length].to_vec()
+        } else {
+            vec![0; self.header.chr_ram_pages * 0x2000]
+        }
     }
 
     pub fn from_file(filename: &str) -> io::Result<NESRom> {

@@ -17,7 +17,7 @@ impl AddressRegister {
 
     pub fn write(&mut self, data: u8) {
         match self.high_pointer {
-            true => self.value = self.value & 0xFF | (data as u16) << 8,
+            true => self.value = self.value & 0x00FF | (data as u16) << 8,
             false => self.value = self.value & 0xFF00 | (data as u16),
         }
 
