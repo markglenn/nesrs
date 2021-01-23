@@ -14,14 +14,14 @@ use sdl2::{event::Event, keyboard::Keycode, pixels::PixelFormatEnum, EventPump};
 fn handle_key(cpu: &mut Cpu, keycode: Keycode, keydown: bool) {
     let joypad = &mut cpu.bus.joypad1;
     match keycode {
-        Keycode::Up => joypad.buttons.set_up(keydown),
-        Keycode::Left => joypad.buttons.set_left(keydown),
-        Keycode::Down => joypad.buttons.set_down(keydown),
-        Keycode::Right => joypad.buttons.set_right(keydown),
+        Keycode::W => joypad.buttons.set_up(keydown),
+        Keycode::A => joypad.buttons.set_left(keydown),
+        Keycode::S => joypad.buttons.set_down(keydown),
+        Keycode::D => joypad.buttons.set_right(keydown),
         Keycode::Return => joypad.buttons.set_start(keydown),
         Keycode::Space => joypad.buttons.set_select(keydown),
-        Keycode::A => joypad.buttons.set_button_a(keydown),
-        Keycode::D => joypad.buttons.set_button_b(keydown),
+        Keycode::Left => joypad.buttons.set_button_a(keydown),
+        Keycode::Right => joypad.buttons.set_button_b(keydown),
         _ => (),
     }
 }
@@ -65,9 +65,8 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let cartridge = Box::new(
-        NESRom::from_file("../nes-test-roms/blargg_ppu_tests_2005.09.15b/vram_access.nes").unwrap(),
-    );
+    let cartridge = Box::new(NESRom::from_file("priv/mario1.nes").unwrap());
+
     let mut cpu = Cpu::new(cartridge);
     cpu.reset();
 

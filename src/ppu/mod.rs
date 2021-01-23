@@ -16,8 +16,8 @@ use crate::hardware::interrupt::Interrupt;
 use crate::mapper::Mirroring;
 
 pub struct Ppu {
-    pub palette_table: [u8; 32],
-    pub vram: [u8; 2048],
+    pub palette_table: [u8; 0x20],
+    pub vram: [u8; 0x800],
     pub oam_data: [u8; 256],
     oam_addr: u8,
     pub chr_rom: Vec<u8>,
@@ -57,10 +57,11 @@ impl Ppu {
     pub fn read(&mut self, address: u16) -> u8 {
         match address {
             0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 | 0x4014 => {
-                panic!(
-                    "Attempted to read from write only register at address: {:04X}",
-                    address
-                );
+                // panic!(
+                //     "Attempted to read from write only register at address: {:04X}",
+                //     address
+                // );
+                0
             }
             0x2002 => self.status.read(),
             0x2004 => self.oam_data[self.oam_addr as usize],
@@ -94,20 +95,20 @@ impl Ppu {
         self.addr.increment(self.ctrl.vram_address_increment());
 
         match address {
-            0..=0x1FFF => self.chr_rom[address as usize],
+            0..=0x1FFF => {
+                let result = self.internal;
+                self.internal = self.chr_rom[address as usize];
+                result
+            }
             0x2000..=0x2FFF => {
                 let result = self.internal;
                 self.internal = self.vram[self.mirror_vram_addr(address) as usize];
                 result
             }
             0x3F00..=0x3FFF => {
-                // 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C are mirrors
-                let mask = if address & 0x11 == 0x10 { 0x0F } else { 0x1F };
-
                 // Side effect: When reading from palette, it also reads from VRAM into buffer
                 self.internal = self.vram[self.mirror_vram_addr(address) as usize];
-
-                self.palette_table[(address & mask) as usize]
+                self.palette_table[self.mirror_palette(address)]
             }
             _ => unimplemented!("Attempted to read from #{:04X}", address),
         }
@@ -120,10 +121,7 @@ impl Ppu {
         match address {
             0..=0x1FFF => self.chr_rom[address as usize] = data,
             0x2000..=0x3EFF => self.vram[self.mirror_vram_addr(address) as usize] = data,
-            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => {
-                self.palette_table[(address & 0x0F) as usize] = data
-            }
-            0x3F00..=0x3FFF => self.palette_table[(address & 0x1F) as usize] = data,
+            0x3F00..=0x3FFF => self.palette_table[self.mirror_palette(address)] = data,
             _ => unimplemented!("Attempted to write to #{:04X}", address),
         }
     }
@@ -179,6 +177,13 @@ impl Ppu {
             (Mirroring::Horizontal, 3) => vram_index - 0x800,
             _ => vram_index,
         }
+    }
+
+    fn mirror_palette(&self, addr: u16) -> usize {
+        (match addr {
+            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => addr & 0x0F,
+            _ => addr & 0x1F,
+        }) as usize
     }
 }
 
