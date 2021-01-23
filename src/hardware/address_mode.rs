@@ -47,14 +47,3 @@ impl fmt::Debug for AddressModeValue {
         }
     }
 }
-
-#[cfg(test)]
-mod test {
-    #![allow(unused_variables, unused_mut, unused_imports)]
-    use super::*;
-
-    #[test]
-    fn test_hello() {
-        assert_eq!(1, 1)
-    }
-}

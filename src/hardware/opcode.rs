@@ -142,8 +142,8 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x0B -
     OpCode {
-        name: "INV",
-        func: invalid,
+        name: "ANC",
+        func: anc,
         address_mode: AddressMode::Implied,
     },
     // 0x0C -
@@ -334,8 +334,8 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x2B -
     OpCode {
-        name: "INV",
-        func: invalid,
+        name: "ANC",
+        func: anc,
         address_mode: AddressMode::Implied,
     },
     // 0x2C -
@@ -526,8 +526,8 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x4B -
     OpCode {
-        name: "INV",
-        func: invalid,
+        name: "ALR",
+        func: alr,
         address_mode: AddressMode::Implied,
     },
     // 0x4C -
@@ -2176,6 +2176,23 @@ fn rra(cpu: &mut Cpu, mode: AddressMode) {
     set_zero_and_negative(cpu, value as u8);
 
     cpu.a = value as u8;
+}
+
+fn anc(cpu: &mut Cpu, _mode: AddressMode) {
+    let operand = read_operand(cpu, AddressMode::Immediate);
+    let result = cpu.a & operand;
+    set_zero_and_negative(cpu, result);
+    cpu.set_flag(CpuStatus::Carry, result & 0x80 != 0);
+    cpu.a = result;
+}
+
+fn alr(cpu: &mut Cpu, _mode: AddressMode) {
+    let operand = read_operand(cpu, AddressMode::Immediate);
+    let mut result = cpu.a & operand;
+    cpu.set_flag(CpuStatus::Carry, result & 1 == 1);
+    result >>= 1;
+    set_zero_and_negative(cpu, result);
+    cpu.a = result;
 }
 
 fn branch(cpu: &mut Cpu, success: bool) {
