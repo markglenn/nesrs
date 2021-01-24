@@ -4,7 +4,7 @@ use super::mask_register::MaskRegister;
 use super::scroll_register::ScrollRegister;
 use super::status_register::StatusRegister;
 
-pub struct Registers {
+pub struct PPUState {
     pub ctrl: ControlRegister,  // 0x2000
     pub mask: MaskRegister,     // 0x2001
     pub status: StatusRegister, // 0x2002
@@ -12,9 +12,9 @@ pub struct Registers {
     pub addr: AddressRegister,  // 0x200
 }
 
-impl Registers {
+impl PPUState {
     pub fn new() -> Self {
-        Registers {
+        PPUState {
             ctrl: ControlRegister::new(),
             mask: MaskRegister::new(),
             status: StatusRegister::new(),

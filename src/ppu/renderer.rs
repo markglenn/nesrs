@@ -1,5 +1,5 @@
 use super::frame::Frame;
-use super::registers::Registers;
+use super::ppu_state::PPUState;
 use super::sprite::Sprite;
 use super::PPUResult;
 
@@ -23,15 +23,15 @@ impl Renderer {
         }
     }
 
-    pub fn tick(&mut self, regs: &mut Registers) -> PPUResult {
+    pub fn tick(&mut self, state: &mut PPUState) -> PPUResult {
         let result = match (self.scanline, self.cycle) {
             (0..=239, _) => {
-                self.tick_sprites();
+                self.tick_sprites(state);
                 PPUResult::None
             }
             (240, 0) => PPUResult::FrameComplete,
             (240, 1) => {
-                regs.status.set_vblank(true);
+                state.status.set_vblank(true);
                 PPUResult::None
             }
             _ => PPUResult::None,
@@ -55,16 +55,25 @@ impl Renderer {
         }
     }
 
-    fn tick_sprites(&mut self) {
+    fn tick_sprites(&mut self, state: &mut PPUState) {
         match self.cycle {
+            257 => self.find_scanline_sprites(state),
             _ => (),
         }
     }
 
+    fn render_background_pixel(&self, x: usize, state: &mut PPUState) -> u8 {
+        if !state.mask.show_background_at(x) {
+            return 0;
+        }
+
+        1
+    }
+
     // Find all sprites that are on this scanline
-    fn load_scanline_sprites(&mut self, regs: &mut Registers) {
+    fn find_scanline_sprites(&mut self, state: &mut PPUState) {
         self.secondary_oam.clear();
-        let sprite_size: usize = if regs.ctrl.sprite_size() { 16 } else { 8 };
+        let sprite_size: usize = if state.ctrl.sprite_size() { 16 } else { 8 };
 
         for addr in (0..256).step_by(4) {
             let sprite = Sprite::new(&self.oam_data[addr..addr + 4]);
@@ -76,7 +85,7 @@ impl Renderer {
             if self.scanline >= top && self.scanline < bottom {
                 // We hit our maximum.  Set the overflow bit and move on
                 if self.secondary_oam.len() == 8 {
-                    regs.status.set_sprite_overflow(true);
+                    state.status.set_sprite_overflow(true);
                     break;
                 }
 

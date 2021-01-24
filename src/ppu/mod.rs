@@ -3,13 +3,13 @@ pub mod frame;
 mod address_register;
 mod control_register;
 mod mask_register;
-mod registers;
+mod ppu_state;
 mod renderer;
 mod scroll_register;
 mod sprite;
 mod status_register;
 
-use registers::Registers;
+use ppu_state::PPUState;
 use renderer::Renderer;
 use std::fmt::Debug;
 
@@ -32,7 +32,7 @@ pub struct Ppu {
     open_bus_value: u8,   // Returned when reading from an open bus
     mirroring: Mirroring, // Mirroring mode
 
-    pub registers: Registers,
+    pub state: PPUState,
     pub renderer: Renderer,
 }
 
@@ -43,7 +43,7 @@ impl Ppu {
             palette_table: [0; 32],
             vram: [0; 2048],
             oam_addr: 0,
-            registers: Registers::new(),
+            state: PPUState::new(),
             mirroring,
             chr_rom,
             open_bus_value: 0,
@@ -58,7 +58,7 @@ impl Ppu {
                 // https://wiki.nesdev.com/w/index.php/Open_bus_behavior
                 self.open_bus_value
             }
-            0x2002 => self.registers.status.read(),
+            0x2002 => self.state.status.read(),
             0x2004 => self.renderer.oam_data[self.oam_addr as usize],
             0x2007 => self.read_data(),
             _ => self.read(address & 0x2007),
@@ -69,13 +69,13 @@ impl Ppu {
         self.open_bus_value = data;
 
         match address {
-            0x2000 => self.registers.ctrl.write(data),
-            0x2001 => self.registers.mask.write(data),
+            0x2000 => self.state.ctrl.write(data),
+            0x2001 => self.state.mask.write(data),
             0x2002 => panic!("Attempted to write to PPU status register"),
             0x2003 => self.oam_addr = data,
             0x2004 => self.write_oam_data(data),
-            0x2005 => self.registers.scroll.write(data),
-            0x2006 => self.registers.addr.write(data),
+            0x2005 => self.state.scroll.write(data),
+            0x2006 => self.state.addr.write(data),
             0x2007 => self.write_data(data),
 
             _ => self.write(address & 0x2007, data),
@@ -88,10 +88,10 @@ impl Ppu {
     }
 
     pub fn read_data(&mut self) -> u8 {
-        let address = self.registers.addr.get();
-        self.registers
+        let address = self.state.addr.get();
+        self.state
             .addr
-            .increment(self.registers.ctrl.vram_address_increment());
+            .increment(self.state.ctrl.vram_address_increment());
 
         match address {
             0..=0x1FFF => {
@@ -114,10 +114,10 @@ impl Ppu {
     }
 
     pub fn write_data(&mut self, data: u8) {
-        let address = self.registers.addr.get();
-        self.registers
+        let address = self.state.addr.get();
+        self.state
             .addr
-            .increment(self.registers.ctrl.vram_address_increment());
+            .increment(self.state.ctrl.vram_address_increment());
 
         match address {
             0..=0x1FFF => self.chr_rom[address as usize] = data,
@@ -128,9 +128,9 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, nmi: &mut Interrupt) {
-        match self.renderer.tick(&mut self.registers) {
+        match self.renderer.tick(&mut self.state) {
             PPUResult::Nmi => {
-                if self.registers.ctrl.generate_nmi() {
+                if self.state.ctrl.generate_nmi() {
                     nmi.schedule(1);
                 }
             }
@@ -181,7 +181,7 @@ impl Debug for Ppu {
             "CYC:{:3} SL:{:3} ST:{:02X}",
             self.renderer.cycle,
             self.renderer.scanline,
-            self.registers.status.get()
+            self.state.status.get()
         )
     }
 }

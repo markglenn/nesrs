@@ -39,4 +39,8 @@ impl MaskRegister {
     pub fn write(&mut self, data: u8) {
         self.set(data);
     }
+
+    pub fn show_background_at(&self, x: usize) -> bool {
+        self.show_background() && (self.leftmost_8_background() || x > 8)
+    }
 }
