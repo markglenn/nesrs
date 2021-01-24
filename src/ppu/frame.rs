@@ -22,4 +22,10 @@ impl Frame {
             self.data[base + 2] = rgb.2;
         }
     }
+
+    pub fn clear(&mut self) {
+        for elem in self.data.iter_mut() {
+            *elem = 0;
+        }
+    }
 }

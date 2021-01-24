@@ -88,8 +88,8 @@ pub static OPCODES: [OpCode; 0x100] = [
     },
     // 0x02 -
     OpCode {
-        name: "INV",
-        func: invalid,
+        name: "KIL",
+        func: kil_debug,
         address_mode: AddressMode::Implied,
     },
     // 0x03 -
@@ -2128,6 +2128,10 @@ fn invalid(_cpu: &mut Cpu, _mode: AddressMode) {
 }
 
 // Undocumented operations
+
+fn kil_debug(_cpu: &mut Cpu, _mode: AddressMode) {
+    println!("-----------KIL!-----------");
+}
 
 fn lax(cpu: &mut Cpu, mode: AddressMode) {
     lda(cpu, mode);

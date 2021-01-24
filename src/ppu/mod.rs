@@ -1,37 +1,39 @@
+pub mod frame;
+
 mod address_register;
 mod control_register;
 mod mask_register;
+mod registers;
+mod renderer;
 mod scroll_register;
+mod sprite;
 mod status_register;
 
+use registers::Registers;
+use renderer::Renderer;
 use std::fmt::Debug;
-
-use address_register::AddressRegister;
-use control_register::ControlRegister;
-use mask_register::MaskRegister;
-use scroll_register::ScrollRegister;
-use status_register::StatusRegister;
 
 use crate::hardware::interrupt::Interrupt;
 use crate::mapper::Mirroring;
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum PPUResult {
+    Nmi,
+    FrameComplete,
+    None,
+}
+
 pub struct Ppu {
     pub palette_table: [u8; 0x20],
     pub vram: [u8; 0x800],
-    pub oam_data: [u8; 256],
     oam_addr: u8,
     pub chr_rom: Vec<u8>,
     internal: u8,         // Internal bus data buffer
+    open_bus_value: u8,   // Returned when reading from an open bus
     mirroring: Mirroring, // Mirroring mode
 
-    pub ctrl: ControlRegister, // 0x2000
-    pub mask: MaskRegister,    // 0x2001
-    status: StatusRegister,    // 0x2002
-    scroll: ScrollRegister,    // 0x2005
-    addr: AddressRegister,     // 0x2006
-
-    dot: usize,
-    scanline: usize,
+    pub registers: Registers,
+    pub renderer: Renderer,
 }
 
 impl Ppu {
@@ -41,44 +43,39 @@ impl Ppu {
             palette_table: [0; 32],
             vram: [0; 2048],
             oam_addr: 0,
-            oam_data: [0; 256],
-            ctrl: ControlRegister::new(),
-            mask: MaskRegister::new(),
-            status: StatusRegister::new(),
-            addr: AddressRegister::new(),
-            scroll: ScrollRegister::new(),
+            registers: Registers::new(),
             mirroring,
-            dot: 0,
-            scanline: 241,
             chr_rom,
+            open_bus_value: 0,
+            renderer: Renderer::new(),
         }
     }
 
     pub fn read(&mut self, address: u16) -> u8 {
         match address {
             0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 | 0x4014 => {
-                // panic!(
-                //     "Attempted to read from write only register at address: {:04X}",
-                //     address
-                // );
-                0
+                // Reading from a write only register return the open bus value
+                // https://wiki.nesdev.com/w/index.php/Open_bus_behavior
+                self.open_bus_value
             }
-            0x2002 => self.status.read(),
-            0x2004 => self.oam_data[self.oam_addr as usize],
+            0x2002 => self.registers.status.read(),
+            0x2004 => self.renderer.oam_data[self.oam_addr as usize],
             0x2007 => self.read_data(),
             _ => self.read(address & 0x2007),
         }
     }
 
     pub fn write(&mut self, address: u16, data: u8) {
+        self.open_bus_value = data;
+
         match address {
-            0x2000 => self.ctrl.write(data),
-            0x2001 => self.mask.write(data),
+            0x2000 => self.registers.ctrl.write(data),
+            0x2001 => self.registers.mask.write(data),
             0x2002 => panic!("Attempted to write to PPU status register"),
             0x2003 => self.oam_addr = data,
             0x2004 => self.write_oam_data(data),
-            0x2005 => self.scroll.write(data),
-            0x2006 => self.addr.write(data),
+            0x2005 => self.registers.scroll.write(data),
+            0x2006 => self.registers.addr.write(data),
             0x2007 => self.write_data(data),
 
             _ => self.write(address & 0x2007, data),
@@ -86,13 +83,15 @@ impl Ppu {
     }
 
     fn write_oam_data(&mut self, value: u8) {
-        self.oam_data[self.oam_addr as usize] = value;
+        self.renderer.oam_data[self.oam_addr as usize] = value;
         self.oam_addr = self.oam_addr.wrapping_add(1);
     }
 
     pub fn read_data(&mut self) -> u8 {
-        let address = self.addr.get();
-        self.addr.increment(self.ctrl.vram_address_increment());
+        let address = self.registers.addr.get();
+        self.registers
+            .addr
+            .increment(self.registers.ctrl.vram_address_increment());
 
         match address {
             0..=0x1FFF => {
@@ -115,8 +114,10 @@ impl Ppu {
     }
 
     pub fn write_data(&mut self, data: u8) {
-        let address = self.addr.get();
-        self.addr.increment(self.ctrl.vram_address_increment());
+        let address = self.registers.addr.get();
+        self.registers
+            .addr
+            .increment(self.registers.ctrl.vram_address_increment());
 
         match address {
             0..=0x1FFF => self.chr_rom[address as usize] = data,
@@ -127,29 +128,15 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, nmi: &mut Interrupt) {
-        self.dot += 1;
-
-        if self.dot >= 341 {
-            self.dot %= 341;
-            self.scanline += 1;
-            match self.scanline {
-                241 => self.start_vblank(nmi),
-                261 => {
-                    // No longer in vblank
-                    self.status.set_vblank(false);
-                    self.scanline = 0;
+        match self.renderer.tick(&mut self.registers) {
+            PPUResult::Nmi => {
+                if self.registers.ctrl.generate_nmi() {
+                    nmi.schedule(1);
                 }
-                _ => (),
             }
-        }
-    }
-
-    fn start_vblank(&mut self, nmi: &mut Interrupt) {
-        self.status.set_vblank(true);
-
-        if self.ctrl.generate_nmi() {
-            nmi.schedule(1);
-        }
+            PPUResult::FrameComplete => (),
+            PPUResult::None => (),
+        };
     }
 
     pub fn write_oam_dma(&mut self, data: &[u8]) {
@@ -192,9 +179,9 @@ impl Debug for Ppu {
         write!(
             f,
             "CYC:{:3} SL:{:3} ST:{:02X}",
-            self.dot,
-            self.scanline,
-            self.status.get()
+            self.renderer.cycle,
+            self.renderer.scanline,
+            self.registers.status.get()
         )
     }
 }

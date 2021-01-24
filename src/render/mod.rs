@@ -1,8 +1,7 @@
 use crate::ppu::Ppu;
 
-use self::frame::Frame;
+use crate::ppu::frame::Frame;
 
-pub mod frame;
 pub mod palette;
 
 fn bg_pallette(ppu: &Ppu, tile_column: usize, tile_row: usize) -> [u8; 4] {
@@ -37,7 +36,7 @@ fn sprite_palette(ppu: &Ppu, pallete_idx: u8) -> [u8; 4] {
 }
 
 fn render_background(ppu: &Ppu, frame: &mut Frame) {
-    let bank = ppu.ctrl.background_pattern_address();
+    let bank = ppu.registers.ctrl.background_pattern_address();
 
     if ppu.chr_rom.len() == 0 {
         return;
@@ -76,10 +75,10 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
         return;
     }
 
-    let tile_y = ppu.oam_data[i + 0] as usize;
-    let tile_x = ppu.oam_data[i + 3] as usize;
-    let tile_idx = ppu.oam_data[i + 1] as usize;
-    let attributes = ppu.oam_data[i + 2];
+    let tile_y = ppu.renderer.oam_data[i + 0] as usize;
+    let tile_x = ppu.renderer.oam_data[i + 3] as usize;
+    let tile_idx = ppu.renderer.oam_data[i + 1] as usize;
+    let attributes = ppu.renderer.oam_data[i + 2];
 
     let flip_vertical = attributes & 0b1000_0000 != 0;
     let flip_horizontal = attributes & 0b0100_0000 != 0;
@@ -88,7 +87,7 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
 
     let sprite_palette = sprite_palette(ppu, palette_idx);
 
-    let bank = ppu.ctrl.sprite_pattern_address() as usize;
+    let bank = ppu.registers.ctrl.sprite_pattern_address() as usize;
 
     let offset = bank + tile_idx * 16;
     let tile = &ppu.chr_rom[offset..=offset + 15];

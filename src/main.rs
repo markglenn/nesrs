@@ -8,8 +8,9 @@ mod render;
 
 use cartridge::rom::NESRom;
 use hardware::cpu::Cpu;
-use render::frame::Frame;
+use ppu::frame::Frame;
 use sdl2::{event::Event, keyboard::Keycode, pixels::PixelFormatEnum, EventPump};
+use std::env;
 
 fn handle_key(cpu: &mut Cpu, keycode: Keycode, keydown: bool) {
     let joypad = &mut cpu.bus.joypad1;
@@ -65,7 +66,15 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let cartridge = Box::new(NESRom::from_file("priv/mario1.nes").unwrap());
+    let args: Vec<String> = env::args().collect();
+
+    let rom = if args.len() > 1 {
+        &args[1]
+    } else {
+        "priv/mario1.nes"
+    };
+
+    let cartridge = Box::new(NESRom::from_file(rom).unwrap());
 
     let mut cpu = Cpu::new(cartridge);
     cpu.reset();
