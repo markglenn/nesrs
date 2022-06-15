@@ -30,7 +30,7 @@ pub struct Ppu {
     scroll: ScrollRegister,    // 0x2005
     addr: AddressRegister,     // 0x2006
 
-    dot: usize,
+    cycle: usize,
     scanline: usize,
 }
 
@@ -48,7 +48,7 @@ impl Ppu {
             addr: AddressRegister::new(),
             scroll: ScrollRegister::new(),
             mirroring,
-            dot: 0,
+            cycle: 0,
             scanline: 241,
             chr_rom,
         }
@@ -127,17 +127,20 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, nmi: &mut Interrupt) {
-        self.dot += 1;
+        self.cycle += 1;
 
-        if self.dot >= 341 {
-            self.dot %= 341;
+        if self.cycle == 341 {
+            self.cycle = 0;
             self.scanline += 1;
+
             match self.scanline {
+                30 => self.status.set_sprite_0_hit(true),
                 241 => self.start_vblank(nmi),
                 261 => {
                     // No longer in vblank
                     self.status.set_vblank(false);
                     self.scanline = 0;
+                    self.status.set_sprite_0_hit(false);
                 }
                 _ => (),
             }
@@ -192,7 +195,7 @@ impl Debug for Ppu {
         write!(
             f,
             "CYC:{:3} SL:{:3} ST:{:02X}",
-            self.dot,
+            self.cycle,
             self.scanline,
             self.status.get()
         )
