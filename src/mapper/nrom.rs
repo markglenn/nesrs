@@ -20,14 +20,11 @@ impl NRomMapper {
         let nrom_type = match header.prg_rom_pages {
             1 => NRomType::NRom128,
             _ => NRomType::NRom256,
-            //_ => panic!("Invalid NRom type {}", header.prg_rom_pages),
         };
-
-        let ram_size = header.prg_ram_size() as u16;
 
         NRomMapper {
             nrom_type,
-            ram_size,
+            ram_size: header.prg_ram_size(),
         }
     }
 }

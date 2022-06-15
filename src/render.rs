@@ -1,9 +1,7 @@
 use crate::ppu::Ppu;
 
-use self::frame::Frame;
-
-pub mod frame;
-pub mod palette;
+use crate::ppu::frame::Frame;
+use crate::ppu::palette;
 
 fn bg_pallette(ppu: &Ppu, tile_column: usize, tile_row: usize) -> [u8; 4] {
     let attr_table_idx = tile_row / 4 * 8 + tile_column / 4;
@@ -63,7 +61,7 @@ fn render_background(ppu: &Ppu, frame: &mut Frame) {
                     1 => palette::SYSTEM_PALETTE[palette[1] as usize],
                     2 => palette::SYSTEM_PALETTE[palette[2] as usize],
                     3 => palette::SYSTEM_PALETTE[palette[3] as usize],
-                    _ => panic!("can't be"),
+                    _ => unreachable!(),
                 };
                 frame.set_pixel(tile_column * 8 + x, tile_row * 8 + y, rgb)
             }
@@ -76,10 +74,10 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
         return;
     }
 
-    let tile_y = ppu.oam_data[i + 0] as usize;
-    let tile_x = ppu.oam_data[i + 3] as usize;
-    let tile_idx = ppu.oam_data[i + 1] as usize;
-    let attributes = ppu.oam_data[i + 2];
+    let tile_y = ppu.primary_oam[i + 0] as usize;
+    let tile_x = ppu.primary_oam[i + 3] as usize;
+    let tile_idx = ppu.primary_oam[i + 1] as usize;
+    let attributes = ppu.primary_oam[i + 2];
 
     let flip_vertical = attributes & 0b1000_0000 != 0;
     let flip_horizontal = attributes & 0b0100_0000 != 0;

@@ -8,7 +8,7 @@ mod render;
 
 use cartridge::rom::NESRom;
 use hardware::cpu::Cpu;
-use render::frame::Frame;
+use ppu::frame::Frame;
 use sdl2::{event::Event, keyboard::Keycode, pixels::PixelFormatEnum, EventPump};
 
 fn handle_key(cpu: &mut Cpu, keycode: Keycode, keydown: bool) {

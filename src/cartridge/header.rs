@@ -65,7 +65,7 @@ impl Header {
         });
     }
 
-    pub fn prg_ram_size(&self) -> usize {
-        self.prg_ram_pages * 0x2000
+    pub fn prg_ram_size(&self) -> u16 {
+        (self.prg_ram_pages * 0x2000) as u16
     }
 }

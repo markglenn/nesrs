@@ -12,16 +12,12 @@ bitfield! {
     pub sprite_size, _: 5;
     pub master_slave_select, _: 6;
     pub generate_nmi, _: 7;
-    pub get, set: 7, 0;
+    pub load, store: 7, 0;
 }
 
 impl ControlRegister {
     pub fn new() -> Self {
         ControlRegister(0)
-    }
-
-    pub fn write(&mut self, data: u8) {
-        self.set(data);
     }
 
     pub fn vram_address_increment(&self) -> u8 {
@@ -38,7 +34,7 @@ impl ControlRegister {
             1 => 0x2400,
             2 => 0x2800,
             3 => 0x2C00,
-            _ => panic!(), // Impossible to hit this
+            _ => unreachable!(),
         }
     }
 
@@ -64,9 +60,9 @@ mod test {
     #[test]
     fn update_sets_value() {
         let mut ctrl = ControlRegister::new();
-        assert_eq!(ctrl.get(), 0);
+        assert_eq!(ctrl.load(), 0);
 
-        ctrl.write(0b101);
+        ctrl.store(0b101);
 
         assert_eq!(ctrl.vram_address_increment(), 32);
         assert_eq!(ctrl.base_nametable_address(), 0x2400);
