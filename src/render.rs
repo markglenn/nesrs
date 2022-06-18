@@ -42,10 +42,10 @@ fn render_background(ppu: &Ppu, frame: &mut Frame) {
     }
 
     for i in 0..0x3c0 {
-        let tile = ppu.vram[i] as u16;
+        let tile = ppu.vram[i] as usize;
         let tile_column = i % 32;
         let tile_row = i / 32;
-        let tile = &ppu.chr_rom[(bank + tile * 16) as usize..=(bank + tile * 16 + 15) as usize];
+        let tile = &ppu.chr_rom[bank + tile * 16..=bank + tile * 16 + 15];
         let palette = bg_pallette(ppu, tile_column, tile_row);
 
         for y in 0..=7 {
@@ -78,7 +78,7 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
 
     let sprite_palette = sprite_palette(ppu, oam_tile.palette_idx());
 
-    let bank = ppu.ctrl.sprite_pattern_address() as usize;
+    let bank = ppu.ctrl.sprite_pattern_address();
 
     let offset = bank + oam_tile.tile_idx() * 16;
     let tile = &ppu.chr_rom[offset..=offset + 15];

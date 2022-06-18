@@ -4,6 +4,7 @@ use super::interrupt::Interrupt;
 use super::joypad::Joypad;
 
 const RAM_SIZE: usize = 0x800;
+
 pub struct Bus {
     ram: [u8; RAM_SIZE],
     cartridge: Box<NESRom>,

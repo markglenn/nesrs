@@ -38,14 +38,14 @@ impl ControlRegister {
         }
     }
 
-    pub fn background_pattern_address(&self) -> u16 {
+    pub fn background_pattern_address(&self) -> usize {
         match self.background_pattern_addr() {
             false => 0x0000,
             true => 0x1000,
         }
     }
 
-    pub fn sprite_pattern_address(&self) -> u16 {
+    pub fn sprite_pattern_address(&self) -> usize {
         match self.sprite_pattern_addr() {
             false => 0x0000,
             true => 0x1000,
