@@ -4,6 +4,7 @@ pub mod palette;
 mod address_register;
 mod control_register;
 mod mask_register;
+mod oam;
 mod scroll_register;
 mod status_register;
 
@@ -18,10 +19,11 @@ use status_register::StatusRegister;
 use crate::hardware::interrupt::Interrupt;
 use crate::mapper::Mirroring;
 
+use oam::OAM;
+
 pub struct Ppu {
     pub palette_table: [u8; 0x20],
     pub vram: [u8; 0x800],
-    oam_addr: u8,
     pub chr_rom: Vec<u8>,
     internal: u8,         // Internal bus data buffer
     mirroring: Mirroring, // Mirroring mode
@@ -32,13 +34,11 @@ pub struct Ppu {
     addr: AddressRegister,     // 0x2006
     scroll: ScrollRegister,    // 0x2005
 
-    register_first_store: bool,
-
     // Contains the 64 sprites for the current frame
-    pub primary_oam: [u8; 256],
+    pub primary_oam: OAM,
 
     // Contains the 8 sprites for the current scanline
-    secondary_oam: [u8; 32],
+    secondary_oam: OAM,
     // Timing information for the PPU
     cycle: usize,
     scanline: usize,
@@ -50,19 +50,17 @@ impl Ppu {
             internal: 0,
             palette_table: [0; 32],
             vram: [0; 2048],
-            oam_addr: 0,
             ctrl: ControlRegister::new(),
             mask: MaskRegister::new(),
             status: StatusRegister::new(),
             addr: AddressRegister::new(),
-            register_first_store: true,
             scroll: ScrollRegister::new(),
 
             mirroring,
             cycle: 0,
 
-            primary_oam: [0; 256],
-            secondary_oam: [0; 32],
+            primary_oam: OAM::new(64),
+            secondary_oam: OAM::new(8),
 
             scanline: 241,
             chr_rom,
@@ -79,7 +77,7 @@ impl Ppu {
                 0
             }
             0x2002 => self.status.load(),
-            0x2004 => self.primary_oam[self.oam_addr as usize],
+            0x2004 => self.primary_oam.load(),
             0x2007 => self.read_data(),
             _ => self.read(address & 0x2007),
         }
@@ -90,19 +88,14 @@ impl Ppu {
             0x2000 => self.ctrl.store(value),
             0x2001 => self.mask.store(value),
             0x2002 => panic!("Attempted to write to PPU status register"),
-            0x2003 => self.oam_addr = value,
-            0x2004 => self.write_oam_data(value),
+            0x2003 => self.primary_oam.store_address(value),
+            0x2004 => self.primary_oam.store(value),
             0x2005 => self.scroll.store(value),
             0x2006 => self.addr.write(value),
             0x2007 => self.write_data(value),
 
             _ => self.write(address & 0x2007, value),
         }
-    }
-
-    fn write_oam_data(&mut self, value: u8) {
-        self.primary_oam[self.oam_addr as usize] = value;
-        self.oam_addr = self.oam_addr.wrapping_add(1);
     }
 
     pub fn read_data(&mut self) -> u8 {
@@ -172,7 +165,7 @@ impl Ppu {
 
     pub fn write_oam_dma(&mut self, data: &[u8]) {
         for i in 0..256 {
-            self.write_oam_data(data[i]);
+            self.primary_oam.store(data[i]);
         }
     }
 

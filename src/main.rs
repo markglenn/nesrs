@@ -65,7 +65,7 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let cartridge = Box::new(NESRom::from_file("priv/mario1.nes").unwrap());
+    let cartridge = Box::new(NESRom::from_file("priv/3.Forward_Branch.nes").unwrap());
 
     let mut cpu = Cpu::new(cartridge);
     cpu.reset();

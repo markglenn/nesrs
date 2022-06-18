@@ -74,21 +74,13 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
         return;
     }
 
-    let tile_y = ppu.primary_oam[i + 0] as usize;
-    let tile_x = ppu.primary_oam[i + 3] as usize;
-    let tile_idx = ppu.primary_oam[i + 1] as usize;
-    let attributes = ppu.primary_oam[i + 2];
+    let oam_tile = ppu.primary_oam.tile(i);
 
-    let flip_vertical = attributes & 0b1000_0000 != 0;
-    let flip_horizontal = attributes & 0b0100_0000 != 0;
-    let palette_idx = attributes & 0b0000_0011;
-    let _priority = attributes & 0b0010_0000 != 0;
-
-    let sprite_palette = sprite_palette(ppu, palette_idx);
+    let sprite_palette = sprite_palette(ppu, oam_tile.palette_idx());
 
     let bank = ppu.ctrl.sprite_pattern_address() as usize;
 
-    let offset = bank + tile_idx * 16;
+    let offset = bank + oam_tile.tile_idx() * 16;
     let tile = &ppu.chr_rom[offset..=offset + 15];
 
     for y in 0..=7 {
@@ -108,14 +100,14 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
                 _ => unimplemented!(),
             };
 
-            let actual_x = match flip_horizontal {
-                false => tile_x + x,
-                true => tile_x + 7 - x,
+            let actual_x = match oam_tile.flip_horizontal() {
+                false => oam_tile.x_pos() + x,
+                true => oam_tile.x_pos() + 7 - x,
             };
 
-            let actual_y = match flip_vertical {
-                false => tile_y + y,
-                true => tile_y + 7 - y,
+            let actual_y = match oam_tile.flip_vertical() {
+                false => oam_tile.y_pos() + y,
+                true => oam_tile.y_pos() + 7 - y,
             };
 
             frame.set_pixel(actual_x, actual_y, rgb);
@@ -127,6 +119,6 @@ pub fn render(ppu: &Ppu, frame: &mut Frame) {
     render_background(ppu, frame);
 
     for i in (0..64).rev() {
-        render_sprite(ppu, frame, i * 4);
+        render_sprite(ppu, frame, i);
     }
 }
