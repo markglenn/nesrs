@@ -17,9 +17,13 @@ use scroll_register::ScrollRegister;
 use status_register::StatusRegister;
 
 use crate::hardware::interrupt::Interrupt;
+use crate::hardware::register::Register;
 use crate::mapper::Mirroring;
 
 use oam::OAM;
+
+use self::frame::Frame;
+use self::oam::SpriteAttributes;
 
 pub struct Ppu {
     pub palette_table: [u8; 0x20],
@@ -28,20 +32,33 @@ pub struct Ppu {
     internal: u8,         // Internal bus data buffer
     mirroring: Mirroring, // Mirroring mode
 
-    pub ctrl: ControlRegister, // 0x2000
-    mask: MaskRegister,        // 0x2001
-    status: StatusRegister,    // 0x2002
-    addr: AddressRegister,     // 0x2006
-    scroll: ScrollRegister,    // 0x2005
+    pub ctrl: ControlRegister,  // 0x2000
+    mask: MaskRegister,         // 0x2001
+    status: StatusRegister,     // 0x2002
+    addr: AddressRegister,      // 0x2006
+    pub scroll: ScrollRegister, // 0x2005
 
     // Contains the 64 sprites for the current frame
     pub primary_oam: OAM,
 
     // Contains the 8 sprites for the current scanline
     secondary_oam: OAM,
+
     // Timing information for the PPU
     cycle: usize,
     scanline: usize,
+
+    // Internal background registers
+    background_patterns: [Register<u16>; 2],
+    background_palette: [Register<u8>; 2],
+
+    // Internal sprite registers
+    sprite_patterns_low: [Register<u8>; 8],
+    sprite_patterns_high: [Register<u8>; 8],
+    sprite_attributes: [SpriteAttributes; 8],
+    sprite_x_positions: [Register<u8>; 8],
+
+    pub frame: Frame,
 }
 
 impl Ppu {
@@ -64,6 +81,25 @@ impl Ppu {
 
             scanline: 241,
             chr_rom,
+
+            background_patterns: [Register::<u16>::new(); 2],
+            background_palette: [Register::<u8>::new(); 2],
+
+            sprite_patterns_low: [Register::<u8>::new(); 8],
+            sprite_patterns_high: [Register::<u8>::new(); 8],
+            sprite_attributes: [
+                SpriteAttributes(0),
+                SpriteAttributes(0),
+                SpriteAttributes(0),
+                SpriteAttributes(0),
+                SpriteAttributes(0),
+                SpriteAttributes(0),
+                SpriteAttributes(0),
+                SpriteAttributes(0),
+            ],
+
+            sprite_x_positions: [Register::<u8>::new(); 8],
+            frame: Frame::new(),
         }
     }
 
@@ -137,14 +173,20 @@ impl Ppu {
     pub fn tick(&mut self, nmi: &mut Interrupt) {
         self.cycle += 1;
 
+        if self.cycle >= 1 && self.cycle <= 256 {
+            self.render_sprites();
+        }
+
         if self.cycle == 341 {
             self.cycle = 0;
             self.scanline += 1;
 
             match self.scanline {
+                // Faked for Super Mario Bros
                 30 => self.status.set_sprite_0_hit(true),
                 241 => self.start_vblank(nmi),
                 261 => {
+                    self.load_shift_registers();
                     // No longer in vblank
                     self.status.set_vblank(false);
                     self.scanline = 0;
@@ -195,6 +237,109 @@ impl Ppu {
             0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => addr & 0x0F,
             _ => addr & 0x1F,
         }) as usize
+    }
+
+    fn load_shift_registers(&mut self) {
+        let scanline = if self.scanline == 261 {
+            0
+        } else {
+            self.scanline
+        };
+
+        // Load the 8 sprites for the line
+        if self.cycle == 257 {
+            self.load_scanline_sprites(scanline);
+        }
+    }
+
+    fn load_scanline_sprites(&mut self, scanline: usize) {
+        let mut sprite_count = 0;
+        self.secondary_oam.clear();
+
+        let sprite_height = self.ctrl.sprite_height();
+        let bank = self.ctrl.sprite_pattern_address();
+
+        // Loop through all the sprites available to the frame
+        for i in 0..64 {
+            // Pull the attribute tile for this sprite
+            let tile = self.primary_oam.tile(i);
+
+            // If it's visible, add it to our visible sprite list
+            if tile.visible_on_scanline(scanline, sprite_height) {
+                let offset = bank + i * 16;
+                let pattern = &self.chr_rom[offset..=offset + 15];
+                let y = scanline - tile.y_pos();
+
+                // Load the 4 registers for this sprite
+                self.sprite_patterns_low[sprite_count].store(pattern[y + 8]);
+                self.sprite_patterns_high[sprite_count].store(pattern[y]);
+
+                self.sprite_x_positions[sprite_count].store(tile.x_pos());
+                self.sprite_attributes[sprite_count] = tile.attributes();
+
+                self.secondary_oam.store_tile(tile);
+
+                sprite_count += 1;
+
+                // Hit our max sprite line count?
+                if sprite_count == 8 {
+                    break;
+                }
+            }
+        }
+        // Fill the remaining sprites with empty values
+        for i in sprite_count..8 {
+            self.sprite_patterns_low[i].store(0);
+            self.sprite_patterns_high[i].store(0);
+        }
+    }
+
+    fn render_sprites(&mut self) {
+        // Decrement the counters
+        for i in 0..8 {
+            if self.sprite_x_positions[i].load() > 0 {
+                self.sprite_x_positions[i].decrement();
+            } else {
+                self.sprite_patterns_high[i].shift(1);
+                self.sprite_patterns_low[i].shift(1);
+            }
+        }
+
+        let sprite_palette = self.sprite_palette(0);
+
+        let mut pixel: u8 = 0;
+        for i in 0..8 {
+            if self.sprite_x_positions[i].load() == 0 {
+                let upper = self.sprite_patterns_high[i].load_bit(0);
+                let lower = self.sprite_patterns_low[i].load_bit(0);
+
+                pixel = (upper << 1) + lower;
+            }
+
+            if pixel > 0 {
+                break;
+            }
+        }
+
+        let rgb = match pixel {
+            0 => (0, 0, 0), // skip pixel
+            1 => palette::SYSTEM_PALETTE[sprite_palette[1] as usize],
+            2 => palette::SYSTEM_PALETTE[sprite_palette[2] as usize],
+            3 => palette::SYSTEM_PALETTE[sprite_palette[3] as usize],
+            _ => unimplemented!(),
+        };
+
+        self.frame.set_pixel(self.cycle, self.scanline, rgb);
+    }
+
+    fn sprite_palette(&self, pallete_idx: u8) -> [u8; 4] {
+        let start = 0x11 + (pallete_idx * 4) as usize;
+        [
+            0,
+            self.palette_table[start],
+            self.palette_table[start + 1],
+            self.palette_table[start + 2],
+        ]
     }
 }
 

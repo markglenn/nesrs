@@ -5,7 +5,9 @@ use crate::ppu::palette;
 
 fn bg_pallette(ppu: &Ppu, tile_column: usize, tile_row: usize) -> [u8; 4] {
     let attr_table_idx = tile_row / 4 * 8 + tile_column / 4;
-    let attr_byte = ppu.vram[0x3c0 + attr_table_idx]; // note: still using hardcoded first nametable
+
+    // note: still using hardcoded first nametable
+    let attr_byte = ppu.vram[0x3c0 + attr_table_idx];
 
     let pallet_idx = match (tile_column % 4 / 2, tile_row % 4 / 2) {
         (0, 0) => attr_byte & 0b11,
@@ -101,8 +103,8 @@ fn render_sprite(ppu: &Ppu, frame: &mut Frame, i: usize) {
             };
 
             let actual_x = match oam_tile.flip_horizontal() {
-                false => oam_tile.x_pos() + x,
-                true => oam_tile.x_pos() + 7 - x,
+                false => oam_tile.x_pos() as usize + x,
+                true => oam_tile.x_pos() as usize + 7 - x,
             };
 
             let actual_y = match oam_tile.flip_vertical() {

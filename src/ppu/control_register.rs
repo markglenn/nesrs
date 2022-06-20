@@ -51,6 +51,14 @@ impl ControlRegister {
             true => 0x1000,
         }
     }
+
+    pub fn sprite_height(&self) -> usize {
+        if self.sprite_size() {
+            16
+        } else {
+            8
+        }
+    }
 }
 
 #[cfg(test)]
